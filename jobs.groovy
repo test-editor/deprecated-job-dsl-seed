@@ -1,73 +1,98 @@
-githuburl = 'https://github.com/test-editor/core-fixture.git'
+/**
+ * Creates all Test-Editor related build jobs
+ */
+//createFeatureBranches('test-editor-xtext')
+createBuildJobs('fixtures')
+createFeatureBranches('test-editor')
 
-// Create jobs for static branches
-['feature/te-195'].each { branch ->
+def createJobName(String repo, String branch){
+    return "${repo}_${branch}_build".replaceAll('/', '_')
+}
 
-    // define jobs
-    def buildJob = defaultBuildJob(branch, true)
+def createBuildJobs(String repo){
+
+    // Create jobs for static branches
+    ['develop', 'master'].each { branch ->
+        // define jobs
+        def jobName = createJobName(repo, branch)
+        defaultBuildJob(jobName, repo, branch, { job ->
+            job.steps {
+                maven {
+                    mavenInstallation('Maven 3.2.5')
+                    goals('clean package checkstyle:checkstyle -DskipTests=true -Dmaven.javadoc.skip=true -B -V')
+                }
+                maven {
+                    mavenInstallation('Maven 3.2.5')
+                    goals('test -B')
+                }
+                if(branch == 'develop'){
+                    maven {
+                        mavenInstallation('Maven 3.2.5')
+                        goals('deploy')
+                    }
+                }
+            }
+        })
+    }
+
+    createFeatureBranches(repo)
+}
+
+def createFeatureBranches(String repo) {
+    def branchApi = new URL("https://api.github.com/repos/test-editor/$repo/branches")
+    def branches = new groovy.json.JsonSlurper().parse(branchApi.newReader())
+
+    branches.findAll { it.name.startsWith('feature/') }.each { branch ->
+        def featureJobName = createJobName(repo, branch.name)
+        defaultBuildJob(featureJobName, repo, branch.name, { job ->
+            job.steps {
+                if (repo == 'test-editor') { // TODO
+                    copyArtifacts('Test-Editor-Target-Platform') {
+                        buildSelector {
+                            latestSuccessful(true)
+                        }
+                    }
+                }
+                maven {
+                    mavenInstallation('Maven 3.2.5')
+                    goals('clean package checkstyle:checkstyle -DskipTests=true -Dmaven.javadoc.skip=true -B -V')
+                }
+                maven {
+                    mavenInstallation('Maven 3.2.5')
+                    goals('test -B')
+                }
+            }
+        })
+    }
 }
 
 /**
  * Defines how a default build job should look like.
  */
-def defaultBuildJob(String branch, boolean clean) {
-    def jobName = "${branch}_build".replaceAll('/', '_')
+def defaultBuildJob(String jobName, String repo, String branch, Closure closure) {
     def buildJob = job(jobName) {
         description "Performs a build on branch: $branch"
         scm {
-              git (
-                  githuburl,
-                  branch,
-                  gitConfigure(branch, true)
-              )
+            git (
+                    "https://github.com/test-editor/${repo}.git",
+                    branch,
+                    gitConfigure(branch, true)
+            )
         }
         triggers {
-            scm 'H/3 * * * *'
-        }
-        wrappers {
-          release {
-    				preBuildSteps {
-    					maven {
-    						mavenInstallation("Maven 3.2.2")
-    						rootPOM("pom.xml")
-    						goals("build-helper:parse-version")
-    						goals("versions:set")
-    						property("newVersion", "\${parsedVersion.majorVersion}.\${parsedVersion.minorVersion}.\${parsedVersion.incrementalVersion}-\${BUILD_NUMBER}")
-    					}
-    				}
-    				postSuccessfulBuildSteps {
-    					maven {
-    						rootPOM("pom.xml")
-    						goals("deploy")
-    					}
-    					maven {
-    						goals("scm:tag")
-    					}
-    					downstreamParameterized {
-    						trigger("deploy-application") {
-                  parameters {
-                    predefinedProp("STAGE", "development")
-                  }
-    						}
-    					}
-    				}
-    			}
-        }
-        steps {
-            maven {
-                goals('clean')
-                goals('package')
-                goals('checkstyle:checkstyle')
-                mavenInstallation('Maven 3.2.2')
-            }
+            // scm 'H/3 * * * *'
         }
         publishers {
-            groovyPostBuild("manager.addShortText(manager.build.getEnvironment(manager.listener)[\'POM_VERSION\'])")
+            checkstyle('**/target/checkstyle-result.xml')
+            findbugs('**/target/findbugsXml.xml')
             jacocoCodeCoverage {
                 execPattern '**/**.exec'
             }
-            archiveJunit '**/app/**/build/test-results/*.xml'
+            archiveJunit '**/target/surefire-reports/*.xml'
         }
+    }
+    if(closure){
+        closure(buildJob)
     }
     return buildJob
 }
@@ -82,5 +107,16 @@ def gitConfigure(branchName, skippingTag) {
 
         // checkout to local branch
         node / 'skipTag'(skippingTag)
+    }
+}
+
+/**
+ * FitNesse plugin configuration section.
+ */
+def fitNesseConfigure(path) {
+    { project ->
+        project / 'publishers' / 'hudson.plugins.fitnesse.FitnesseResultsRecorder' {
+            'fitnessePathToXmlResultsIn'(path)
+        }
     }
 }
