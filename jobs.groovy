@@ -1,17 +1,69 @@
 import groovy.json.JsonSlurper
 
+def releaseView = createView("Release", "<h3>Release build jobs for the Test-Editor artefacts.</h3>\n" +
+        "(see <a href=\"https://github.com/test-editor\">test-editor @ GitHub</a>)")
+def fixtureView = createView("Fixtures", "<h3>Build jobs for the fixtures of the Test-Editor artefacts.</h3>\n" +
+        "(see <a href=\"https://github.com/test-editor/fixtures\">fixtures @ GitHub</a>)")
+//def testEditorView = createView("Test-Editor", "<h3>Build jobs for the Test-Editor artefacts.</h3>\n" +
+//        "(see <a href=\"https://github.com/test-editor/test-editor\">test-editor @ GitHub</a>)")
+//def amlView = createView("AML", "<h3>Build jobs for the Application (Under Test) Mapping Language.</h3>\n" +
+//        "(see <a href=\"https://github.com/test-editor/test-editor-xtext\">AML @ GitHub</a>)")
+
 /**
  * Creates all Test-Editor related build jobs
  */
-//createFeatureBranches('test-editor-xtext')
-createBuildJobs('fixtures')
-createFeatureBranches('test-editor')
+//createBuildJobs(amlView, 'test-editor-xtext')
+//createBuildJobs(testEditorView, 'test-editor')
+createBuildJobs(fixtureView, 'fixtures')
 
-def createJobName(String repo, String branch){
-    return "${repo}_${branch}_build".replaceAll('/', '_')
+/**
+ * Creates single release jobs for each fixture.
+ */
+["core", "web", "rest", "soap", "swing", "swt"].each { fixtureName ->
+    createReleaseJobs4Fixtures(releaseView, fixtureName, 'fixtures')
 }
 
-def createBuildJobs(String repo){
+/**
+ * Creates list view with default columns.
+ */
+def createView(String viewName, String text){
+    return listView(viewName){
+        description("${text}")
+        columns {
+            status()
+            weather()
+            name()
+            lastSuccess()
+            lastFailure()
+            lastDuration()
+            buildButton()
+        }
+    }
+}
+
+/**
+ * Creates job name for build jobs.
+ */
+def createJobName(String repo, String branch){
+    return "${repo}_${branch}_CI".replaceAll('/', '_')
+}
+
+/**
+ * Adds job to given view.
+ */
+void addJob2View(def view, String jobName){
+    view.with {
+        jobs {
+            name(jobName)
+        }
+    }
+}
+
+
+/**
+ * Creates build jobs for master-, develop- and all feature-branches.
+ */
+void createBuildJobs(def view, String repo){
 
     // Create jobs for static branches
     ['develop', 'master'].each { branch ->
@@ -31,68 +83,16 @@ def createBuildJobs(String repo){
                 }
             }
         })
-
-        if(branch == 'master'){
-            def releaseJobName = "${branch}_release"
-            defaultBuildJob(releaseJobName, repo, branch, { job ->
-                job.steps {
-                    shell('git merge origin/develop')
-                    maven {
-                        mavenInstallation('Maven 3.2.5')
-                        goals("build-helper:parse-version")
-                        goals("versions:set")
-                        property("generateBackupPoms", "false")
-                        property("newVersion", "\${parsedVersion.majorVersion}.\${parsedVersion.minorVersion}.\${parsedVersion.incrementalVersion}")
-                        rootPOM("core/org.testeditor.fixture.parent/pom.xml")
-                    }
-                    shell('git add *')
-                    shell('git commit -m "develop branch merged and release version set."')
-                    maven {
-                        mavenInstallation('Maven 3.2.5')
-                        goals('clean package -DskipTests=true -B -V')
-                        rootPOM("core/pom.xml")
-                    }
-                    maven {
-                        mavenInstallation('Maven 3.2.5')
-                        goals('test -B')
-                        rootPOM("core/pom.xml")
-                    }
-                    maven {
-                        mavenInstallation('Maven 3.2.5')
-                        goals('deploy')
-                        rootPOM("core/pom.xml")
-                    }
-                    maven {
-                        mavenInstallation('Maven 3.2.5')
-                        goals('scm:tag')
-                        rootPOM("core/pom.xml")
-                        property("connectionUrl", "scm:git:ssh://git@github.com/test-editor/fixtures")
-                        property("developerConnectionUrl", "scm:git:ssh://git@github.com/test-editor/fixtures")
-                    }
-                    maven {
-                        mavenInstallation('Maven 3.2.5')
-                        goals("build-helper:parse-version")
-                        goals("versions:set")
-                        property("generateBackupPoms", "false")
-                        property("newVersion", "\${parsedVersion.majorVersion}.\${parsedVersion.minorVersion}.\${parsedVersion.nextIncrementalVersion}-SNAPSHOT}")
-                        rootPOM("core/org.testeditor.fixture.parent/pom.xml")
-                    }
-                    shell('git add *')
-                    shell('git commit -m "next snapshot version set."')
-                    shell('git push origin master')
-                    shell('checkout -b develop --track origin/develop')
-                    shell('merge origin/master')
-                    shell('git push origin develop')
-                }
-            })
-
-        }
+        addJob2View(view, jobName)
     }
 
-    createFeatureBranches(repo)
+    createFeatureBranches(view, repo)
 }
 
-def createFeatureBranches(String repo) {
+/**
+ * Creates build jobs for feature-branches.
+ */
+void createFeatureBranches(def view, String repo) {
     def branchApi = new URL("https://api.github.com/repos/test-editor/$repo/branches")
     def branches = new JsonSlurper().parse(branchApi.newReader())
 
@@ -117,7 +117,76 @@ def createFeatureBranches(String repo) {
                 }
             }
         })
+        addJob2View(view, featureJobName)
     }
+}
+
+/**
+ * Creates a release job for the given fixture.
+ */
+void createReleaseJobs4Fixtures(def view, String fixtureName, String repo){
+        def releaseJobName = "${fixtureName}_fixture_RELEASE"
+
+        defaultBuildJob(releaseJobName, repo, branch, { job ->
+            job.steps {
+                shell('git merge origin/develop')
+                maven {
+                    mavenInstallation('Maven 3.2.5')
+                    goals("build-helper:parse-version")
+                    goals("versions:set")
+                    property("generateBackupPoms", "false")
+                    property("newVersion", "\${parsedVersion.majorVersion}.\${parsedVersion.minorVersion}.\${parsedVersion.incrementalVersion}")
+                    if(fixtureName == 'core') {
+                        rootPOM("${fixtureName}/org.testeditor.fixture.parent/pom.xml")
+                    } else {
+                        rootPOM("${fixtureName}/pom.xml")
+                    }
+                }
+                shell('git add *')
+                shell('git commit -m "develop branch merged and release version set."')
+                maven {
+                    mavenInstallation('Maven 3.2.5')
+                    goals('clean package -DskipTests=true -B -V')
+                    rootPOM("${fixtureName}/pom.xml")
+                }
+                maven {
+                    mavenInstallation('Maven 3.2.5')
+                    goals('test -B')
+                    rootPOM("${fixtureName}/pom.xml")
+                }
+                maven {
+                    mavenInstallation('Maven 3.2.5')
+                    goals('deploy')
+                    rootPOM("${fixtureName}/pom.xml")
+                }
+                maven {
+                    mavenInstallation('Maven 3.2.5')
+                    goals('scm:tag')
+                    rootPOM("${fixtureName}/pom.xml")
+                    property("connectionUrl", "scm:git:ssh://git@github.com/test-editor/${repo}")
+                    property("developerConnectionUrl", "scm:git:ssh://git@github.com/test-editor/${repo}")
+                }
+                maven {
+                    mavenInstallation('Maven 3.2.5')
+                    goals("build-helper:parse-version")
+                    goals("versions:set")
+                    property("generateBackupPoms", "false")
+                    property("newVersion", "\${parsedVersion.majorVersion}.\${parsedVersion.minorVersion}.\${parsedVersion.nextIncrementalVersion}-SNAPSHOT")
+                    if(fixtureName == 'core') {
+                        rootPOM("${fixtureName}/org.testeditor.fixture.parent/pom.xml")
+                    } else {
+                        rootPOM("${fixtureName}/pom.xml")
+                    }
+                }
+                shell('git add *')
+                shell('git commit -m "next snapshot version set."')
+                shell('git push origin master')
+                shell('checkout -b develop --track origin/develop')
+                shell('merge origin/master')
+                shell('git push origin develop')
+            }
+        })
+        addJob2View(view, releaseJobName)
 }
 
 /**
@@ -134,7 +203,7 @@ def defaultBuildJob(String jobName, String repo, String branch, Closure closure)
             )
         }
         triggers {
-            // scm 'H/3 * * * *'
+            // githubPush()
         }
         publishers {
             checkstyle('**/target/checkstyle-result.xml')
@@ -159,7 +228,7 @@ def gitConfigure(branchName, skippingTag) {
         // checkout to local branch
         node / 'extensions' / 'hudson.plugins.git.extensions.impl.LocalBranch' / localBranch(branchName)
 
-        // checkout to local branch
+        // no default tagging
         node / 'skipTag'(skippingTag)
     }
 }
