@@ -9,6 +9,9 @@ def fixtureView = createView("Fixtures", "<h3>Build jobs for the fixtures of the
 //def amlView = createView("AML", "<h3>Build jobs for the Application (Under Test) Mapping Language.</h3>\n" +
 //        "(see <a href=\"https://github.com/test-editor/test-editor-xtext\">AML @ GitHub</a>)")
 
+
+String[] fixtures = ["core", "web", "rest", "soap", "swing", "swt"]
+
 /**
  * Creates all Test-Editor related build jobs
  */
@@ -19,7 +22,7 @@ createBuildJobs(fixtureView, 'fixtures')
 /**
  * Creates single release jobs for each fixture.
  */
-["core", "web", "rest", "soap", "swing", "swt"].each { fixtureName ->
+fixtures.each { fixtureName ->
     createReleaseJobs4Fixtures(releaseView, fixtureName, 'fixtures')
 }
 
@@ -74,12 +77,10 @@ void createBuildJobs(def view, String repo){
                 maven {
                     mavenInstallation('Maven 3.2.5')
                     goals('clean package -DskipTests=true -Dmaven.javadoc.skip=true -B -V')
-                    rootPOM("core/pom.xml")
                 }
                 maven {
                     mavenInstallation('Maven 3.2.5')
                     goals('test -B')
-                    rootPOM("core/pom.xml")
                 }
             }
         })
