@@ -127,7 +127,7 @@ void createFeatureBranches(def view, String repo) {
 void createReleaseJobs4Fixtures(def view, String fixtureName, String repo){
         def releaseJobName = "${fixtureName}_fixture_RELEASE"
 
-        defaultBuildJob(releaseJobName, repo, branch, { job ->
+        defaultBuildJob(releaseJobName, repo, 'master', { job ->
             job.steps {
                 shell('git merge origin/develop')
                 maven {
