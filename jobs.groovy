@@ -1,3 +1,5 @@
+import groovy.json.JsonSlurper
+
 /**
  * Creates all Test-Editor related build jobs
  */
@@ -19,20 +21,72 @@ def createBuildJobs(String repo){
             job.steps {
                 maven {
                     mavenInstallation('Maven 3.2.5')
-                    goals('clean package checkstyle:checkstyle -DskipTests=true -Dmaven.javadoc.skip=true -B -V')
+                    goals('clean package -DskipTests=true -Dmaven.javadoc.skip=true -B -V')
+                    rootPOM("core/pom.xml")
                 }
                 maven {
                     mavenInstallation('Maven 3.2.5')
                     goals('test -B')
-                }
-                if(branch == 'develop'){
-                    maven {
-                        mavenInstallation('Maven 3.2.5')
-                        goals('deploy')
-                    }
+                    rootPOM("core/pom.xml")
                 }
             }
         })
+
+        if(branch == 'master'){
+            def releaseJobName = "${branch}_release"
+            defaultBuildJob(releaseJobName, repo, branch, { job ->
+                job.steps {
+                    shell('git merge origin/develop')
+                    maven {
+                        mavenInstallation('Maven 3.2.5')
+                        goals("build-helper:parse-version")
+                        goals("versions:set")
+                        property("generateBackupPoms", "false")
+                        property("newVersion", "\${parsedVersion.majorVersion}.\${parsedVersion.minorVersion}.\${parsedVersion.incrementalVersion}")
+                        rootPOM("core/org.testeditor.fixture.parent/pom.xml")
+                    }
+                    shell('git add *')
+                    shell('git commit -m "develop branch merged and release version set."')
+                    maven {
+                        mavenInstallation('Maven 3.2.5')
+                        goals('clean package -DskipTests=true -B -V')
+                        rootPOM("core/pom.xml")
+                    }
+                    maven {
+                        mavenInstallation('Maven 3.2.5')
+                        goals('test -B')
+                        rootPOM("core/pom.xml")
+                    }
+                    maven {
+                        mavenInstallation('Maven 3.2.5')
+                        goals('deploy')
+                        rootPOM("core/pom.xml")
+                    }
+                    maven {
+                        mavenInstallation('Maven 3.2.5')
+                        goals('scm:tag')
+                        rootPOM("core/pom.xml")
+                        property("connectionUrl", "scm:git:ssh://git@github.com/test-editor/fixtures")
+                        property("developerConnectionUrl", "scm:git:ssh://git@github.com/test-editor/fixtures")
+                    }
+                    maven {
+                        mavenInstallation('Maven 3.2.5')
+                        goals("build-helper:parse-version")
+                        goals("versions:set")
+                        property("generateBackupPoms", "false")
+                        property("newVersion", "\${parsedVersion.majorVersion}.\${parsedVersion.minorVersion}.\${parsedVersion.nextIncrementalVersion}-SNAPSHOT}")
+                        rootPOM("core/org.testeditor.fixture.parent/pom.xml")
+                    }
+                    shell('git add *')
+                    shell('git commit -m "next snapshot version set."')
+                    shell('git push origin master')
+                    shell('checkout -b develop --track origin/develop')
+                    shell('merge origin/master')
+                    shell('git push origin develop')
+                }
+            })
+
+        }
     }
 
     createFeatureBranches(repo)
@@ -40,7 +94,7 @@ def createBuildJobs(String repo){
 
 def createFeatureBranches(String repo) {
     def branchApi = new URL("https://api.github.com/repos/test-editor/$repo/branches")
-    def branches = new groovy.json.JsonSlurper().parse(branchApi.newReader())
+    def branches = new JsonSlurper().parse(branchApi.newReader())
 
     branches.findAll { it.name.startsWith('feature/') }.each { branch ->
         def featureJobName = createJobName(repo, branch.name)
@@ -55,7 +109,7 @@ def createFeatureBranches(String repo) {
                 }
                 maven {
                     mavenInstallation('Maven 3.2.5')
-                    goals('clean package checkstyle:checkstyle -DskipTests=true -Dmaven.javadoc.skip=true -B -V')
+                    goals('clean package -DskipTests=true -Dmaven.javadoc.skip=true -B -V')
                 }
                 maven {
                     mavenInstallation('Maven 3.2.5')
@@ -74,7 +128,7 @@ def defaultBuildJob(String jobName, String repo, String branch, Closure closure)
         description "Performs a build on branch: $branch"
         scm {
             git (
-                    "https://github.com/test-editor/${repo}.git",
+                    "git@github.com:test-editor/${repo}.git",
                     branch,
                     gitConfigure(branch, true)
             )
