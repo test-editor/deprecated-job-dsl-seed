@@ -146,12 +146,12 @@ void createReleaseJobs4Fixtures(def view, String fixtureName, String repo){
                         goals("versions:set")
                         property("generateBackupPoms", "false")
                         property("newVersion", "\${parsedVersion.majorVersion}.\${parsedVersion.minorVersion}.\${parsedVersion.incrementalVersion}")
-                        rootPOM("\${fixtureName}/org.testeditor.fixture.parent/pom.xml")
+                        rootPOM("${fixtureName}/org.testeditor.fixture.parent/pom.xml")
                     } else{
                         goals('versions:update-parent')
                         property("generateBackupPoms", "false")
                         property("parentVersion", "[\${CORE_VERSION}]")
-                        rootPOM("\${fixtureName}/pom.xml")
+                        rootPOM("${fixtureName}/pom.xml")
                     }
                 }
 
@@ -161,9 +161,9 @@ void createReleaseJobs4Fixtures(def view, String fixtureName, String repo){
                         goals("versions:set")
                         property("generateBackupPoms", "false")
                         property("newVersion", "[\${NEW_FIXTURE_VERSION}]")
-                        property("artifactId", "\${fixtureName}")
+                        property("artifactId", "${fixtureName}")
                         property("updateMatchingVersions", "false")
-                        rootPOM("\${fixtureName}/pom.xml")
+                        rootPOM("${fixtureName}/pom.xml")
                     }
                 }
 
@@ -173,27 +173,27 @@ void createReleaseJobs4Fixtures(def view, String fixtureName, String repo){
                 maven {
                     mavenInstallation('Maven 3.2.5')
                     goals('clean package -DskipTests=true -B -V')
-                    rootPOM("\${fixtureName}/pom.xml")
+                    rootPOM("${fixtureName}/pom.xml")
                 }
 
                 maven {
                     mavenInstallation('Maven 3.2.5')
                     goals('test -B')
-                    rootPOM("\${fixtureName}/pom.xml")
+                    rootPOM("${fixtureName}/pom.xml")
                 }
 
                 maven {
                     mavenInstallation('Maven 3.2.5')
                     goals('deploy')
-                    rootPOM("\${fixtureName}/pom.xml")
+                    rootPOM("${fixtureName}/pom.xml")
                 }
 
                 maven {
                     mavenInstallation('Maven 3.2.5')
                     goals('scm:tag')
-                    rootPOM("\${fixtureName}/pom.xml")
-                    property("connectionUrl", "scm:git:ssh://git@github.com/test-editor/\${repo}")
-                    property("developerConnectionUrl", "scm:git:ssh://git@github.com/test-editor/\${repo}")
+                    rootPOM("${fixtureName}/pom.xml")
+                    property("connectionUrl", "scm:git:ssh://git@github.com/test-editor/${repo}")
+                    property("developerConnectionUrl", "scm:git:ssh://git@github.com/test-editor/${repo}")
                 }
 
                 maven {
@@ -203,11 +203,11 @@ void createReleaseJobs4Fixtures(def view, String fixtureName, String repo){
                     property("generateBackupPoms", "false")
                     property("newVersion", "\${parsedVersion.majorVersion}.\${parsedVersion.minorVersion}.\${parsedVersion.nextIncrementalVersion}-SNAPSHOT")
                     if(fixtureName == 'core') {
-                        rootPOM("\${fixtureName}/org.testeditor.fixture.parent/pom.xml")
+                        rootPOM("${fixtureName}/org.testeditor.fixture.parent/pom.xml")
                     } else {
-                        property("artifactId", "\${fixtureName}")
+                        property("artifactId", "${fixtureName}")
                         property("updateMatchingVersions", "false")
-                        rootPOM("\${fixtureName}/pom.xml")
+                        rootPOM("${fixtureName}/pom.xml")
                     }
                 }
 
