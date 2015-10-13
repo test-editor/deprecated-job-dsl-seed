@@ -161,7 +161,7 @@ void createReleaseJobs4Fixtures(def view, String fixtureName, String repo){
                         goals("versions:set")
                         property("generateBackupPoms", "false")
                         property("newVersion", "[\${NEW_FIXTURE_VERSION}]")
-                        property("artifactId", "${fixtureName}")
+                        property("artifactId", "${fixtureName}-fixture")
                         property("updateMatchingVersions", "false")
                         rootPOM("${fixtureName}/pom.xml")
                     }
@@ -205,7 +205,7 @@ void createReleaseJobs4Fixtures(def view, String fixtureName, String repo){
                     if(fixtureName == 'core') {
                         rootPOM("${fixtureName}/org.testeditor.fixture.parent/pom.xml")
                     } else {
-                        property("artifactId", "${fixtureName}")
+                        property("artifactId", "${fixtureName}-fixture")
                         property("updateMatchingVersions", "false")
                         rootPOM("${fixtureName}/pom.xml")
                     }
