@@ -146,6 +146,10 @@ void createReleaseJobs4Fixtures(def view, String fixtureName, String repo){
                 }
             }
 
+            job.wrappers {
+                preBuildCleanup()
+            }
+
             job.steps {
                 shell('git merge origin/develop')
 
