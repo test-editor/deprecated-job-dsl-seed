@@ -136,6 +136,16 @@ void createReleaseJobs4Fixtures(def view, String fixtureName, String repo){
                 }
             }
 
+            if(fixtureName.equals('swing')){
+                job.wrappers {
+                    xvfb('System') {
+                        timeout(0)
+                        screen('1024x768x24')
+                        displayNameOffset(1)
+                    }
+                }
+            }
+
             job.steps {
                 shell('git merge origin/develop')
 
