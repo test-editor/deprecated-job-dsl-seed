@@ -160,7 +160,7 @@ void createReleaseJobs4Fixtures(def view, String fixtureName, String repo){
                         mavenInstallation('Maven 3.2.5')
                         goals("versions:set")
                         property("generateBackupPoms", "false")
-                        property("newVersion", "[\${NEW_FIXTURE_VERSION}]")
+                        property("newVersion", "\${NEW_FIXTURE_VERSION}")
                         property("artifactId", "${fixtureName}-fixture")
                         property("updateMatchingVersions", "false")
                         rootPOM("${fixtureName}/pom.xml")
