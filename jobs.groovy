@@ -131,42 +131,73 @@ void createReleaseJobs4Fixtures(def view, String fixtureName, String repo){
         defaultBuildJob(releaseJobName, repo, 'master', { job ->
             job.steps {
                 shell('git merge origin/develop')
-                maven {
-                    mavenInstallation('Maven 3.2.5')
-                    goals("build-helper:parse-version")
-                    goals("versions:set")
-                    property("generateBackupPoms", "false")
-                    property("newVersion", "\${parsedVersion.majorVersion}.\${parsedVersion.minorVersion}.\${parsedVersion.incrementalVersion}")
-                    if(fixtureName == 'core') {
-                        rootPOM("${fixtureName}/org.testeditor.fixture.parent/pom.xml")
-                    } else {
-                        rootPOM("${fixtureName}/pom.xml")
+
+                if(!fixtureName.equals('core')){
+                    parameters {
+                        textParam('NEW_FIXTURE_VERSION', '', 'Please enter the fixture version number of the new release.')
+                    }
+                    parameters {
+                        textParam('CORE_VERSION', '', 'Please enter the version number for the parent pom, this fixture depends on.')
                     }
                 }
+
+                maven {
+                    mavenInstallation('Maven 3.2.5')
+                    if(fixtureName.equals('core')){
+                        goals("build-helper:parse-version")
+                        goals("versions:set")
+                        property("generateBackupPoms", "false")
+                        property("newVersion", "\${parsedVersion.majorVersion}.\${parsedVersion.minorVersion}.\${parsedVersion.incrementalVersion}")
+                        rootPOM("\${fixtureName}/org.testeditor.fixture.parent/pom.xml")
+                    } else{
+                        goals('versions:update-parent')
+                        property("generateBackupPoms", "false")
+                        property("parentVersion", "[\${CORE_VERSION}]")
+                        rootPOM("\${fixtureName}/pom.xml")
+                    }
+                }
+
+                if(!fixtureName.equals('core')){
+                    maven {
+                        mavenInstallation('Maven 3.2.5')
+                        goals("versions:set")
+                        property("generateBackupPoms", "false")
+                        property("newVersion", "[\${NEW_FIXTURE_VERSION}]")
+                        property("artifactId", "\${fixtureName}")
+                        property("updateMatchingVersions", "false")
+                        rootPOM("\${fixtureName}/pom.xml")
+                    }
+                }
+
                 shell('git add *')
                 shell('git commit -m "develop branch merged and release version set."')
+
                 maven {
                     mavenInstallation('Maven 3.2.5')
                     goals('clean package -DskipTests=true -B -V')
-                    rootPOM("${fixtureName}/pom.xml")
+                    rootPOM("\${fixtureName}/pom.xml")
                 }
+
                 maven {
                     mavenInstallation('Maven 3.2.5')
                     goals('test -B')
-                    rootPOM("${fixtureName}/pom.xml")
+                    rootPOM("\${fixtureName}/pom.xml")
                 }
+
                 maven {
                     mavenInstallation('Maven 3.2.5')
                     goals('deploy')
-                    rootPOM("${fixtureName}/pom.xml")
+                    rootPOM("\${fixtureName}/pom.xml")
                 }
+
                 maven {
                     mavenInstallation('Maven 3.2.5')
                     goals('scm:tag')
-                    rootPOM("${fixtureName}/pom.xml")
-                    property("connectionUrl", "scm:git:ssh://git@github.com/test-editor/${repo}")
-                    property("developerConnectionUrl", "scm:git:ssh://git@github.com/test-editor/${repo}")
+                    rootPOM("\${fixtureName}/pom.xml")
+                    property("connectionUrl", "scm:git:ssh://git@github.com/test-editor/\${repo}")
+                    property("developerConnectionUrl", "scm:git:ssh://git@github.com/test-editor/\${repo}")
                 }
+
                 maven {
                     mavenInstallation('Maven 3.2.5')
                     goals("build-helper:parse-version")
@@ -174,16 +205,19 @@ void createReleaseJobs4Fixtures(def view, String fixtureName, String repo){
                     property("generateBackupPoms", "false")
                     property("newVersion", "\${parsedVersion.majorVersion}.\${parsedVersion.minorVersion}.\${parsedVersion.nextIncrementalVersion}-SNAPSHOT")
                     if(fixtureName == 'core') {
-                        rootPOM("${fixtureName}/org.testeditor.fixture.parent/pom.xml")
+                        rootPOM("\${fixtureName}/org.testeditor.fixture.parent/pom.xml")
                     } else {
-                        rootPOM("${fixtureName}/pom.xml")
+                        property("artifactId", "\${fixtureName}")
+                        property("updateMatchingVersions", "false")
+                        rootPOM("\${fixtureName}/pom.xml")
                     }
                 }
+
                 shell('git add *')
                 shell('git commit -m "next snapshot version set."')
                 shell('git push origin master')
-                shell('checkout -b develop --track origin/develop')
-                shell('merge origin/master')
+                shell('git checkout -b develop --track origin/develop')
+                shell('git merge origin/master')
                 shell('git push origin develop')
             }
         })
