@@ -129,17 +129,15 @@ void createReleaseJobs4Fixtures(def view, String fixtureName, String repo){
         def releaseJobName = "${fixtureName}_fixture_RELEASE"
 
         defaultBuildJob(releaseJobName, repo, 'master', { job ->
+            if(!fixtureName.equals('core')){
+                job.parameters {
+                    textParam('NEW_FIXTURE_VERSION', '', 'Please enter the fixture version number of the new release.')
+                    textParam('CORE_VERSION', '', 'Please enter the version number for the parent pom, this fixture depends on.')
+                }
+            }
+
             job.steps {
                 shell('git merge origin/develop')
-
-                if(!fixtureName.equals('core')){
-                    parameters {
-                        textParam('NEW_FIXTURE_VERSION', '', 'Please enter the fixture version number of the new release.')
-                    }
-                    parameters {
-                        textParam('CORE_VERSION', '', 'Please enter the version number for the parent pom, this fixture depends on.')
-                    }
-                }
 
                 maven {
                     mavenInstallation('Maven 3.2.5')
