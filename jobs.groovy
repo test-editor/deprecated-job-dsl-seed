@@ -131,8 +131,8 @@ void createReleaseJobs4Fixtures(def view, String fixtureName, String repo){
         defaultBuildJob(releaseJobName, repo, 'master', { job ->
             if(!fixtureName.equals('core')){
                 job.parameters {
-                    textParam('NEW_FIXTURE_VERSION', '', 'Please enter the fixture version number of the new release.')
-                    textParam('CORE_VERSION', '', 'Please enter the version number for the parent pom, this fixture depends on.')
+                    stringParam('NEW_FIXTURE_VERSION', '', 'Please enter the fixture version number of the new release.')
+                    stringParam('CORE_VERSION', '', 'Please enter the version number for the parent pom, this fixture depends on.')
                 }
             }
 
