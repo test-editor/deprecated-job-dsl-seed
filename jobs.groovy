@@ -72,7 +72,7 @@ void createBuildJobs(def view, String repo){
     ['develop', 'master'].each { branch ->
         // define jobs
         def jobName = createJobName(repo, branch)
-        defaultBuildJob(jobName, repo, branch, { job ->
+        def buildJob = defaultBuildJob(jobName, repo, branch, { job ->
             job.steps {
                 maven {
                     mavenInstallation('Maven 3.2.5')
@@ -84,6 +84,8 @@ void createBuildJobs(def view, String repo){
                 }
             }
         })
+        addXvfbStart(buildJob)
+        addPreBuildCleanup(buildJob)
         addJob2View(view, jobName)
     }
 
@@ -119,6 +121,32 @@ void createFeatureBranches(def view, String repo) {
             }
         })
         addJob2View(view, featureJobName)
+    }
+}
+
+/**
+ * Adds the xvfb start to build job
+ */
+void addXvfbStart(def job){
+    job.with{
+        wrappers {
+            xvfb('System') {
+                timeout(0)
+                screen('1024x768x24')
+                displayNameOffset(1)
+            }
+        }
+    }
+}
+
+/**
+ * Adds pre build clean-up of workspace
+ */
+void addPreBuildCleanup(def job){
+    job.with{
+        wrappers {
+            preBuildCleanup()
+        }
     }
 }
 
