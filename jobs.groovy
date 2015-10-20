@@ -164,7 +164,7 @@ void createReleaseJobs4Fixtures(def view, String fixtureName, String repo){
                 }
             }
 
-            if(fixtureName.equals('swing')){
+            if(["swing", "swt"].contains(fixtureName)){
                 job.wrappers {
                     xvfb('System') {
                         timeout(0)
