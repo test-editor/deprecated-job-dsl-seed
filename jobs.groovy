@@ -1,5 +1,11 @@
 import groovy.json.JsonSlurper
 
+class Globals{
+    static String mavenInstallation = "Maven 3.2.5"
+}
+
+String[] fixtures = ["core", "web", "rest", "soap", "swing", "swt"]
+
 def releaseView = createView("Release", "<h3>Release build jobs for the Test-Editor artefacts.</h3>\n" +
         "(see <a href=\"https://github.com/test-editor\">test-editor @ GitHub</a>)")
 def fixtureView = createView("Fixtures", "<h3>Build jobs for the fixtures of the Test-Editor artefacts.</h3>\n" +
@@ -9,8 +15,6 @@ def fixtureView = createView("Fixtures", "<h3>Build jobs for the fixtures of the
 //def amlView = createView("AML", "<h3>Build jobs for the Application (Under Test) Mapping Language.</h3>\n" +
 //        "(see <a href=\"https://github.com/test-editor/test-editor-xtext\">AML @ GitHub</a>)")
 
-
-String[] fixtures = ["core", "web", "rest", "soap", "swing", "swt"]
 
 /**
  * Creates all Test-Editor related build jobs
@@ -26,42 +30,6 @@ fixtures.each { fixtureName ->
     createReleaseJobs4Fixtures(releaseView, fixtureName, 'fixtures')
 }
 
-/**
- * Creates list view with default columns.
- */
-def createView(String viewName, String text){
-    return listView(viewName){
-        description("${text}")
-        columns {
-            status()
-            weather()
-            name()
-            lastSuccess()
-            lastFailure()
-            lastDuration()
-            buildButton()
-        }
-    }
-}
-
-/**
- * Creates job name for build jobs.
- */
-def createJobName(String repo, String branch){
-    return "${repo}_${branch}_CI".replaceAll('/', '_')
-}
-
-/**
- * Adds job to given view.
- */
-void addJob2View(def view, String jobName){
-    view.with {
-        jobs {
-            name(jobName)
-        }
-    }
-}
-
 
 /**
  * Creates build jobs for master-, develop- and all feature-branches.
@@ -75,11 +43,11 @@ void createBuildJobs(def view, String repo){
         def buildJob = defaultBuildJob(jobName, repo, branch, { job ->
             job.steps {
                 maven {
-                    mavenInstallation('Maven 3.2.5')
+                    mavenInstallation(Globals.mavenInstallation)
                     goals('clean package -DskipTests=true -Dmaven.javadoc.skip=true -B -V')
                 }
                 maven {
-                    mavenInstallation('Maven 3.2.5')
+                    mavenInstallation(Globals.mavenInstallation)
                     goals('test -B')
                 }
             }
@@ -111,42 +79,16 @@ void createFeatureBranches(def view, String repo) {
                     }
                 }
                 maven {
-                    mavenInstallation('Maven 3.2.5')
+                    mavenInstallation(Globals.mavenInstallation)
                     goals('clean package -DskipTests=true -Dmaven.javadoc.skip=true -B -V')
                 }
                 maven {
-                    mavenInstallation('Maven 3.2.5')
+                    mavenInstallation(Globals.mavenInstallation)
                     goals('test -B')
                 }
             }
         })
         addJob2View(view, featureJobName)
-    }
-}
-
-/**
- * Adds the xvfb start to build job
- */
-void addXvfbStart(def job){
-    job.with{
-        wrappers {
-            xvfb('System') {
-                timeout(0)
-                screen('1024x768x24')
-                displayNameOffset(1)
-            }
-        }
-    }
-}
-
-/**
- * Adds pre build clean-up of workspace
- */
-void addPreBuildCleanup(def job){
-    job.with{
-        wrappers {
-            preBuildCleanup()
-        }
     }
 }
 
@@ -174,7 +116,7 @@ void createReleaseJobs4Fixtures(def view, String fixtureName, String repo){
                 shell('git merge origin/develop')
 
                 maven {
-                    mavenInstallation('Maven 3.2.5')
+                    mavenInstallation(Globals.mavenInstallation)
                     if(fixtureName.equals('core')){
                         goals("build-helper:parse-version")
                         goals("versions:set")
@@ -191,7 +133,7 @@ void createReleaseJobs4Fixtures(def view, String fixtureName, String repo){
 
                 if(!fixtureName.equals('core')){
                     maven {
-                        mavenInstallation('Maven 3.2.5')
+                        mavenInstallation(Globals.mavenInstallation)
                         goals("versions:set")
                         property("generateBackupPoms", "false")
                         property("newVersion", "\${NEW_FIXTURE_VERSION}")
@@ -205,25 +147,25 @@ void createReleaseJobs4Fixtures(def view, String fixtureName, String repo){
                 shell('git commit -m "develop branch merged and release version set."')
 
                 maven {
-                    mavenInstallation('Maven 3.2.5')
+                    mavenInstallation(Globals.mavenInstallation)
                     goals('clean package -DskipTests=true -B -V')
                     rootPOM("${fixtureName}/pom.xml")
                 }
 
                 maven {
-                    mavenInstallation('Maven 3.2.5')
+                    mavenInstallation(Globals.mavenInstallation)
                     goals('test -B')
                     rootPOM("${fixtureName}/pom.xml")
                 }
 
                 maven {
-                    mavenInstallation('Maven 3.2.5')
+                    mavenInstallation(Globals.mavenInstallation)
                     goals('deploy')
                     rootPOM("${fixtureName}/pom.xml")
                 }
 
                 maven {
-                    mavenInstallation('Maven 3.2.5')
+                    mavenInstallation(Globals.mavenInstallation)
                     goals('scm:tag')
                     rootPOM("${fixtureName}/pom.xml")
                     property("connectionUrl", "scm:git:ssh://git@github.com/test-editor/${repo}")
@@ -231,7 +173,7 @@ void createReleaseJobs4Fixtures(def view, String fixtureName, String repo){
                 }
 
                 maven {
-                    mavenInstallation('Maven 3.2.5')
+                    mavenInstallation(Globals.mavenInstallation)
                     goals("build-helper:parse-version")
                     goals("versions:set")
                     property("generateBackupPoms", "false")
@@ -307,6 +249,68 @@ def fitNesseConfigure(path) {
     { project ->
         project / 'publishers' / 'hudson.plugins.fitnesse.FitnesseResultsRecorder' {
             'fitnessePathToXmlResultsIn'(path)
+        }
+    }
+}
+
+/**
+ * Creates list view with default columns.
+ */
+def createView(String viewName, String text){
+    return listView(viewName){
+        description("${text}")
+        columns {
+            status()
+            weather()
+            name()
+            lastSuccess()
+            lastFailure()
+            lastDuration()
+            buildButton()
+        }
+    }
+}
+
+/**
+ * Creates job name for build jobs.
+ */
+def createJobName(String repo, String branch){
+    return "${repo}_${branch}_CI".replaceAll('/', '_')
+}
+
+/**
+ * Adds job to given view.
+ */
+void addJob2View(def view, String jobName){
+    view.with {
+        jobs {
+            name(jobName)
+        }
+    }
+}
+
+/**
+ * Adds the xvfb start to build job
+ */
+void addXvfbStart(def job){
+    job.with{
+        wrappers {
+            xvfb('System') {
+                timeout(0)
+                screen('1024x768x24')
+                displayNameOffset(1)
+            }
+        }
+    }
+}
+
+/**
+ * Adds pre build clean-up of workspace
+ */
+void addPreBuildCleanup(def job){
+    job.with{
+        wrappers {
+            preBuildCleanup()
         }
     }
 }
