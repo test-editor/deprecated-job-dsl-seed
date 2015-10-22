@@ -10,8 +10,8 @@ def releaseView = createView("Release", "<h3>Release build jobs for the Test-Edi
         "(see <a href=\"https://github.com/test-editor\">test-editor @ GitHub</a>)")
 def fixtureView = createView("Fixtures", "<h3>Build jobs for the fixtures of the Test-Editor artefacts.</h3>\n" +
         "(see <a href=\"https://github.com/test-editor/fixtures\">fixtures @ GitHub</a>)")
-//def testEditorView = createView("Test-Editor", "<h3>Build jobs for the Test-Editor artefacts.</h3>\n" +
-//        "(see <a href=\"https://github.com/test-editor/test-editor\">test-editor @ GitHub</a>)")
+def testEditorView = createView("Test-Editor", "<h3>Build jobs for the Test-Editor artefacts.</h3>\n" +
+        "(see <a href=\"https://github.com/test-editor/test-editor\">test-editor @ GitHub</a>)")
 //def amlView = createView("AML", "<h3>Build jobs for the Application (Under Test) Mapping Language.</h3>\n" +
 //        "(see <a href=\"https://github.com/test-editor/test-editor-xtext\">AML @ GitHub</a>)")
 
@@ -19,6 +19,7 @@ def fixtureView = createView("Fixtures", "<h3>Build jobs for the fixtures of the
 /**
  * Creates all Test-Editor related build jobs
  */
+createTargetPlattformBuildJob(testEditorView, 'te.target')
 //createBuildJobs(amlView, 'test-editor-xtext')
 //createBuildJobs(testEditorView, 'test-editor')
 createBuildJobs(fixtureView, 'fixtures')
@@ -30,6 +31,25 @@ fixtures.each { fixtureName ->
     createReleaseJobs4Fixtures(releaseView, fixtureName, 'fixtures')
 }
 
+/**
+ * Creates build job for target plattform
+ */
+void createTargetPlattformBuildJob(def view, String repo){
+    String jobName = 'Test-Editor-Target-Platform'
+    def buildJob = defaultBuildJob(jobName, repo, 'master', false, { job ->
+        job.steps {
+            maven {
+                mavenInstallation(Globals.mavenInstallation)
+                goals('clean install')
+            }
+        }
+
+        job.publishers {
+            archiveArtifacts('org.testeditor.releng.target/p2-local/**')
+        }
+    })
+    addJob2View(view, jobName)
+}
 
 /**
  * Creates build jobs for master-, develop- and all feature-branches.
@@ -40,7 +60,7 @@ void createBuildJobs(def view, String repo){
     ['develop', 'master'].each { branch ->
         // define jobs
         def jobName = createJobName(repo, branch)
-        def buildJob = defaultBuildJob(jobName, repo, branch, { job ->
+        def buildJob = defaultBuildJob(jobName, repo, branch, true, { job ->
             job.steps {
                 maven {
                     mavenInstallation(Globals.mavenInstallation)
@@ -69,7 +89,7 @@ void createFeatureBranches(def view, String repo) {
 
     branches.findAll { it.name.startsWith('feature/') }.each { branch ->
         def featureJobName = createJobName(repo, branch.name)
-        defaultBuildJob(featureJobName, repo, branch.name, { job ->
+        defaultBuildJob(featureJobName, repo, branch.name, true, { job ->
             job.steps {
                 if (repo == 'test-editor') { // TODO
                     copyArtifacts('Test-Editor-Target-Platform') {
@@ -98,7 +118,7 @@ void createFeatureBranches(def view, String repo) {
 void createReleaseJobs4Fixtures(def view, String fixtureName, String repo){
         def releaseJobName = "${fixtureName}_fixture_RELEASE"
 
-        defaultBuildJob(releaseJobName, repo, 'master', { job ->
+        defaultBuildJob(releaseJobName, repo, 'master', true, { job ->
             if(!fixtureName.equals('core')){
                 job.parameters {
                     stringParam('NEW_FIXTURE_VERSION', '', 'Please enter the fixture version number of the new release.')
@@ -201,7 +221,7 @@ void createReleaseJobs4Fixtures(def view, String fixtureName, String repo){
 /**
  * Defines how a default build job should look like.
  */
-def defaultBuildJob(String jobName, String repo, String branch, Closure closure) {
+def defaultBuildJob(String jobName, String repo, String branch, boolean withQA, Closure closure) {
     def buildJob = job(jobName) {
         description "Performs a build on branch: $branch"
         scm {
@@ -214,6 +234,23 @@ def defaultBuildJob(String jobName, String repo, String branch, Closure closure)
         triggers {
             // githubPush()
         }
+    }
+
+    if(withQA){
+        addQAPublishers(buildJob)
+    }
+
+    if(closure){
+        closure(buildJob)
+    }
+    return buildJob
+}
+
+/**
+ * Adds QA publishers to given job
+ */
+void addQAPublishers(def job){
+    job.with{
         publishers {
             checkstyle('**/target/checkstyle-result.xml')
             findbugs('**/target/findbugsXml.xml')
@@ -223,10 +260,6 @@ def defaultBuildJob(String jobName, String repo, String branch, Closure closure)
             archiveJunit '**/target/surefire-reports/*.xml'
         }
     }
-    if(closure){
-        closure(buildJob)
-    }
-    return buildJob
 }
 
 /**
