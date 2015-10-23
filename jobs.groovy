@@ -77,7 +77,7 @@ void createTEBuildJobs(def view, String repo) {
     addPreBuildCleanup(buildJob)
     addExtendedQAPublishers(buildJob)
     addArchiveArtefacts(buildJob, 'product/org.testeditor.product/target/products/TestEditor*.zip')
-    addTriggerBuildOnProject(Globals.teIntegrationTestJobName)
+    addTriggerBuildOnProject(buildJob, Globals.teIntegrationTestJobName)
     addJob2View(view, jobName)
 
     // Create feature branches
