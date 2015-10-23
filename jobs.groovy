@@ -1,7 +1,9 @@
 import groovy.json.JsonSlurper
 
-class Globals{
+class Globals {
     static String mavenInstallation = "Maven 3.2.5"
+    static String targetPlattformJobName = "Test-Editor-Target-Platform"
+    static String teIntegrationTestJobName = "Test-Editor-Integration-Test"
 }
 
 String[] fixtures = ["core", "web", "rest", "soap", "swing", "swt"]
@@ -21,7 +23,7 @@ def testEditorView = createView("Test-Editor", "<h3>Build jobs for the Test-Edit
  */
 createTargetPlattformBuildJob(testEditorView, 'te.target')
 //createBuildJobs(amlView, 'test-editor-xtext')
-//createBuildJobs(testEditorView, 'test-editor')
+createTEBuildJobs(testEditorView, 'test-editor')
 createBuildJobs(fixtureView, 'fixtures')
 
 /**
@@ -35,48 +37,78 @@ fixtures.each { fixtureName ->
  * Creates build job for target plattform
  */
 void createTargetPlattformBuildJob(def view, String repo){
-    String jobName = 'Test-Editor-Target-Platform'
-    def buildJob = defaultBuildJob(jobName, repo, 'master', false, { job ->
+    String jobName = Globals.targetPlattformJobName
+    def buildJob = defaultBuildJob(jobName, repo, 'master', { job ->
         job.steps {
             maven {
                 mavenInstallation(Globals.mavenInstallation)
                 goals('clean install')
             }
         }
-
-        job.publishers {
-            archiveArtifacts('org.testeditor.releng.target/p2-local/**')
-        }
     })
+    addArchiveArtefacts(buildJob, 'org.testeditor.releng.target/p2-local/**')
     addJob2View(view, jobName)
 }
 
 /**
- * Creates build jobs for master-, develop- and all feature-branches.
+ * Creates TE build jobs for develop- and all feature-branches.
+ */
+void createTEBuildJobs(def view, String repo) {
+
+    // Create job for develop branch
+    def jobName = createJobName(repo, 'develop')
+    def buildJob = defaultBuildJob(jobName, repo, 'develop', { job ->
+        job.steps {
+            copyArtifacts(Globals.targetPlattformJobName) {
+                buildSelector {
+                    latestSuccessful(true)
+                }
+            }
+
+            maven {
+                mavenInstallation(Globals.mavenInstallation)
+                goals('clean package checkstyle:checkstyle pmd:pmd pmd:cpd -P product')
+                property("te-target", "file://\${WORKSPACE}/org.testeditor.releng.target/p2-local")
+            }
+        }
+    })
+    addGithubPush(buildJob)
+    addXvfbStart(buildJob)
+    addPreBuildCleanup(buildJob)
+    addExtendedQAPublishers(buildJob)
+    addArchiveArtefacts(buildJob, 'product/org.testeditor.product/target/products/TestEditor*.zip')
+    addTriggerBuildOnProject(Globals.teIntegrationTestJobName)
+    addJob2View(view, jobName)
+
+    // Create feature branches
+    //createFeatureBranches(view, repo)
+}
+
+/**
+ * Creates build jobs for develop- and all feature-branches.
  */
 void createBuildJobs(def view, String repo){
 
-    // Create jobs for static branches
-    ['develop', 'master'].each { branch ->
-        // define jobs
-        def jobName = createJobName(repo, branch)
-        def buildJob = defaultBuildJob(jobName, repo, branch, true, { job ->
-            job.steps {
-                maven {
-                    mavenInstallation(Globals.mavenInstallation)
-                    goals('clean package -DskipTests=true -Dmaven.javadoc.skip=true -B -V')
-                }
-                maven {
-                    mavenInstallation(Globals.mavenInstallation)
-                    goals('test -B')
-                }
+    // Create job for develop branch
+    def jobName = createJobName(repo, 'develop')
+    def buildJob = defaultBuildJob(jobName, repo, 'develop', { job ->
+        job.steps {
+            maven {
+                mavenInstallation(Globals.mavenInstallation)
+                goals('clean package -DskipTests=true -Dmaven.javadoc.skip=true -B -V')
             }
-        })
-        addXvfbStart(buildJob)
-        addPreBuildCleanup(buildJob)
-        addJob2View(view, jobName)
-    }
+            maven {
+                mavenInstallation(Globals.mavenInstallation)
+                goals('test -B')
+            }
+        }
+    })
+    addXvfbStart(buildJob)
+    addPreBuildCleanup(buildJob)
+    addQAPublishers(buildJob)
+    addJob2View(view, jobName)
 
+    // Create feature branches
     createFeatureBranches(view, repo)
 }
 
@@ -89,7 +121,7 @@ void createFeatureBranches(def view, String repo) {
 
     branches.findAll { it.name.startsWith('feature/') }.each { branch ->
         def featureJobName = createJobName(repo, branch.name)
-        defaultBuildJob(featureJobName, repo, branch.name, true, { job ->
+        def buildJob = defaultBuildJob(featureJobName, repo, branch.name, { job ->
             job.steps {
                 if (repo == 'test-editor') { // TODO
                     copyArtifacts('Test-Editor-Target-Platform') {
@@ -108,6 +140,7 @@ void createFeatureBranches(def view, String repo) {
                 }
             }
         })
+        addQAPublishers(buildJob)
         addJob2View(view, featureJobName)
     }
 }
@@ -118,110 +151,111 @@ void createFeatureBranches(def view, String repo) {
 void createReleaseJobs4Fixtures(def view, String fixtureName, String repo){
         def releaseJobName = "${fixtureName}_fixture_RELEASE"
 
-        defaultBuildJob(releaseJobName, repo, 'master', true, { job ->
-            if(!fixtureName.equals('core')){
-                job.parameters {
-                    stringParam('NEW_FIXTURE_VERSION', '', 'Please enter the fixture version number of the new release.')
-                    stringParam('CORE_VERSION', '', 'Please enter the version number for the parent pom, this fixture depends on.')
-                }
+    defaultBuildJob(releaseJobName, repo, 'master', { job ->
+        if (!fixtureName.equals('core')) {
+            job.parameters {
+                stringParam('NEW_FIXTURE_VERSION', '', 'Please enter the fixture version number of the new release.')
+                stringParam('CORE_VERSION', '', 'Please enter the version number for the parent pom, this fixture depends on.')
             }
+        }
 
-            if(["swing", "swt"].contains(fixtureName)){
-                addXvfbStart(job)
-            }
+        if (["swing", "swt"].contains(fixtureName)) {
+            addXvfbStart(job)
+        }
 
-            addPreBuildCleanup(job)
+        addPreBuildCleanup(job)
+        addQAPublishers(job)
 
-            job.steps {
-                shell('git merge origin/develop')
+        job.steps {
+            shell('git merge origin/develop')
 
-                maven {
-                    mavenInstallation(Globals.mavenInstallation)
-                    if(fixtureName.equals('core')){
-                        goals("build-helper:parse-version")
-                        goals("versions:set")
-                        property("generateBackupPoms", "false")
-                        property("newVersion", "\${parsedVersion.majorVersion}.\${parsedVersion.minorVersion}.\${parsedVersion.incrementalVersion}")
-                        rootPOM("${fixtureName}/org.testeditor.fixture.parent/pom.xml")
-                    } else{
-                        goals('versions:update-parent')
-                        property("generateBackupPoms", "false")
-                        property("parentVersion", "[\${CORE_VERSION}]")
-                        rootPOM("${fixtureName}/pom.xml")
-                    }
-                }
-
-                if(!fixtureName.equals('core')){
-                    maven {
-                        mavenInstallation(Globals.mavenInstallation)
-                        goals("versions:set")
-                        property("generateBackupPoms", "false")
-                        property("newVersion", "\${NEW_FIXTURE_VERSION}")
-                        property("artifactId", "${fixtureName}-fixture")
-                        property("updateMatchingVersions", "false")
-                        rootPOM("${fixtureName}/pom.xml")
-                    }
-                }
-
-                shell('git add *')
-                shell('git commit -m "develop branch merged and release version set."')
-
-                maven {
-                    mavenInstallation(Globals.mavenInstallation)
-                    goals('clean package -DskipTests=true -B -V')
-                    rootPOM("${fixtureName}/pom.xml")
-                }
-
-                maven {
-                    mavenInstallation(Globals.mavenInstallation)
-                    goals('test -B')
-                    rootPOM("${fixtureName}/pom.xml")
-                }
-
-                maven {
-                    mavenInstallation(Globals.mavenInstallation)
-                    goals('deploy')
-                    rootPOM("${fixtureName}/pom.xml")
-                }
-
-                maven {
-                    mavenInstallation(Globals.mavenInstallation)
-                    goals('scm:tag')
-                    rootPOM("${fixtureName}/pom.xml")
-                    property("connectionUrl", "scm:git:ssh://git@github.com/test-editor/${repo}")
-                    property("developerConnectionUrl", "scm:git:ssh://git@github.com/test-editor/${repo}")
-                }
-
-                maven {
-                    mavenInstallation(Globals.mavenInstallation)
+            maven {
+                mavenInstallation(Globals.mavenInstallation)
+                if (fixtureName.equals('core')) {
                     goals("build-helper:parse-version")
                     goals("versions:set")
                     property("generateBackupPoms", "false")
-                    property("newVersion", "\${parsedVersion.majorVersion}.\${parsedVersion.minorVersion}.\${parsedVersion.nextIncrementalVersion}-SNAPSHOT")
-                    if(fixtureName == 'core') {
-                        rootPOM("${fixtureName}/org.testeditor.fixture.parent/pom.xml")
-                    } else {
-                        property("artifactId", "${fixtureName}-fixture")
-                        property("updateMatchingVersions", "false")
-                        rootPOM("${fixtureName}/pom.xml")
-                    }
+                    property("newVersion", "\${parsedVersion.majorVersion}.\${parsedVersion.minorVersion}.\${parsedVersion.incrementalVersion}")
+                    rootPOM("${fixtureName}/org.testeditor.fixture.parent/pom.xml")
+                } else {
+                    goals('versions:update-parent')
+                    property("generateBackupPoms", "false")
+                    property("parentVersion", "[\${CORE_VERSION}]")
+                    rootPOM("${fixtureName}/pom.xml")
                 }
-
-                shell('git add *')
-                shell('git commit -m "next snapshot version set."')
-                shell('git push origin master')
-                shell('git checkout -b develop --track origin/develop')
-                shell('git merge origin/master')
-                shell('git push origin develop')
             }
-        })
-        addJob2View(view, releaseJobName)
+
+            if (!fixtureName.equals('core')) {
+                maven {
+                    mavenInstallation(Globals.mavenInstallation)
+                    goals("versions:set")
+                    property("generateBackupPoms", "false")
+                    property("newVersion", "\${NEW_FIXTURE_VERSION}")
+                    property("artifactId", "${fixtureName}-fixture")
+                    property("updateMatchingVersions", "false")
+                    rootPOM("${fixtureName}/pom.xml")
+                }
+            }
+
+            shell('git add *')
+            shell('git commit -m "develop branch merged and release version set."')
+
+            maven {
+                mavenInstallation(Globals.mavenInstallation)
+                goals('clean package -DskipTests=true -B -V')
+                rootPOM("${fixtureName}/pom.xml")
+            }
+
+            maven {
+                mavenInstallation(Globals.mavenInstallation)
+                goals('test -B')
+                rootPOM("${fixtureName}/pom.xml")
+            }
+
+            maven {
+                mavenInstallation(Globals.mavenInstallation)
+                goals('deploy')
+                rootPOM("${fixtureName}/pom.xml")
+            }
+
+            maven {
+                mavenInstallation(Globals.mavenInstallation)
+                goals('scm:tag')
+                rootPOM("${fixtureName}/pom.xml")
+                property("connectionUrl", "scm:git:ssh://git@github.com/test-editor/${repo}")
+                property("developerConnectionUrl", "scm:git:ssh://git@github.com/test-editor/${repo}")
+            }
+
+            maven {
+                mavenInstallation(Globals.mavenInstallation)
+                goals("build-helper:parse-version")
+                goals("versions:set")
+                property("generateBackupPoms", "false")
+                property("newVersion", "\${parsedVersion.majorVersion}.\${parsedVersion.minorVersion}.\${parsedVersion.nextIncrementalVersion}-SNAPSHOT")
+                if (fixtureName == 'core') {
+                    rootPOM("${fixtureName}/org.testeditor.fixture.parent/pom.xml")
+                } else {
+                    property("artifactId", "${fixtureName}-fixture")
+                    property("updateMatchingVersions", "false")
+                    rootPOM("${fixtureName}/pom.xml")
+                }
+            }
+
+            shell('git add *')
+            shell('git commit -m "next snapshot version set."')
+            shell('git push origin master')
+            shell('git checkout -b develop --track origin/develop')
+            shell('git merge origin/master')
+            shell('git push origin develop')
+        }
+    })
+    addJob2View(view, releaseJobName)
 }
 
 /**
  * Defines how a default build job should look like.
  */
-def defaultBuildJob(String jobName, String repo, String branch, boolean withQA, Closure closure) {
+def defaultBuildJob(String jobName, String repo, String branch, Closure closure) {
     def buildJob = job(jobName) {
         description "Performs a build on branch: $branch"
         scm {
@@ -231,19 +265,23 @@ def defaultBuildJob(String jobName, String repo, String branch, boolean withQA, 
                     gitConfigure(branch, true)
             )
         }
-        triggers {
-            // githubPush()
-        }
-    }
-
-    if(withQA){
-        addQAPublishers(buildJob)
     }
 
     if(closure){
         closure(buildJob)
     }
     return buildJob
+}
+
+/**
+ * Adds github push trigger to given job
+ */
+void addGithubPush(def job) {
+    job.with {
+        triggers {
+            githubPush()
+        }
+    }
 }
 
 /**
@@ -258,6 +296,34 @@ void addQAPublishers(def job){
                 execPattern '**/**.exec'
             }
             archiveJunit '**/target/surefire-reports/*.xml'
+        }
+    }
+}
+
+/**
+ * Adds QA publishers to given job
+ */
+void addExtendedQAPublishers(def job) {
+    job.with {
+        publishers {
+            checkstyle('**/target/checkstyle-result.xml')
+            findbugs('**/target/findbugsXml.xml')
+            pmd('**/target/pmd.xml')
+            jacocoCodeCoverage {
+                execPattern '**/**.exec'
+            }
+            archiveJunit '**/target/surefire-reports/*.xml'
+        }
+    }
+}
+
+/**
+ * Adds artefact archiving
+ */
+void addArchiveArtefacts(def job, String artefact) {
+    job.with {
+        publishers {
+            archiveArtifacts(artefact)
         }
     }
 }
@@ -344,6 +410,14 @@ void addPreBuildCleanup(def job){
     job.with{
         wrappers {
             preBuildCleanup()
+        }
+    }
+}
+
+void addTriggerBuildOnProject(def job, String projectName) {
+    job.with {
+        publishers {
+            downstream(projectName, 'SUCCESS')
         }
     }
 }
