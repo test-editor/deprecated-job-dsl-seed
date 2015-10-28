@@ -21,8 +21,9 @@ ListView testEditorView = createView("Test-Editor", "<h3>Build jobs for the Test
  */
 createTargetPlattformBuildJob(testEditorView, 'te.target')
 //createBuildJobs(amlView, 'test-editor-xtext')
-createTEAcceptanceTestJob(testEditorView, 'acceptance-test-infra')
 createTEBuildJobs(testEditorView, 'test-editor')
+createTEIntegrationTestJobs(testEditorView, 'test-editor')
+createTEAcceptanceTestJob(testEditorView, 'acceptance-test-infra')
 createBuildJobs(fixtureView, 'fixtures')
 
 /**
@@ -110,6 +111,40 @@ void createTEBuildJobs(ListView view, String repo) {
     addExtendedQAPublishers(buildJob)
     addArchiveArtefacts(buildJob, 'product/org.testeditor.product/target/products/TestEditor*.zip')
     addTriggerBuildOnProject(buildJob, Globals.teIntegrationTestJobName)
+    addJob2View(view, jobName)
+
+    // Create feature branches
+    //createFeatureBranches(view, repo)
+}
+
+/**
+ * Creates TE integration test jobs for develop- and all feature-branches.
+ */
+void createTEIntegrationTestJobs(ListView view, String repo) {
+
+    // Create job for develop branch
+    def jobName = Globals.teIntegrationTestJobName
+    FreeStyleJob buildJob = defaultBuildJob(jobName, repo, 'develop', { FreeStyleJob job ->
+        job.steps {
+            copyArtifacts(Globals.targetPlattformJobName) {
+                buildSelector {
+                    latestSuccessful(true)
+                }
+            }
+
+            maven {
+                mavenInstallation(Globals.mavenInstallation)
+                goals('integration-test')
+                property("te-target", "file://\${WORKSPACE}/org.testeditor.releng.target/p2-local")
+                property("JRE_REPO", "file:///var/lib/jenkins/jre_repo")
+            }
+        }
+    })
+    limitBuildsTo(buildJob, 5)
+    addXvfbStart(buildJob)
+    addPreBuildCleanup(buildJob)
+    addQAPublishers(buildJob)
+    addTriggerBuildOnProject(buildJob, Globals.teAcceptanceTestLinuxJobName)
     addJob2View(view, jobName)
 
     // Create feature branches
