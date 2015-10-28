@@ -33,30 +33,36 @@ class JobHelper {
     /**
      * Adds Git branch configuration section.
      */
-    static void addGitConfigureBranch(branchName) {
-        { node ->
-            // checkout to local branch
-            node / 'extensions' / 'hudson.plugins.git.extensions.impl.LocalBranch' / localBranch(branchName)
+    static void addGitConfigureBranch(FreeStyleJob job, branchName) {
+        job.with {
+            configure { node ->
+                // checkout to local branch
+                node / 'extensions' / 'hudson.plugins.git.extensions.impl.LocalBranch' / localBranch(branchName)
+            }
         }
     }
 
     /**
      * Adds Git skipping tag creation configuration section.
      */
-    static void addGitConfigureSkipTag(skippingTag) {
-        { node ->
-            // no default tagging
-            node / 'skipTag'(skippingTag)
+    static void addGitConfigureSkipTag(FreeStyleJob job, skippingTag) {
+        job.with {
+            configure { node ->
+                // no default tagging
+                node / 'skipTag'(skippingTag)
+            }
         }
     }
 
     /**
      * FitNesse plugin configuration section.
      */
-    static void fitNesseConfigure(path) {
-        { project ->
-            project / 'publishers' / 'hudson.plugins.fitnesse.FitnesseResultsRecorder' {
-                'fitnessePathToXmlResultsIn'(path)
+    static void fitNesseConfigure(FreeStyleJob job, path) {
+        job.with {
+            configure { project ->
+                project / 'publishers' / 'hudson.plugins.fitnesse.FitnesseResultsRecorder' {
+                    'fitnessePathToXmlResultsIn'(path)
+                }
             }
         }
     }
