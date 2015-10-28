@@ -1,22 +1,20 @@
 import groovy.json.JsonSlurper
+import helper.Globals
+import javaposse.jobdsl.dsl.jobs.FreeStyleJob
+import javaposse.jobdsl.dsl.views.ListView
 
-class Globals {
-    static String mavenInstallation = "Maven 3.2.5"
-    static String targetPlattformJobName = "Test-Editor-Target-Platform"
-    static String teIntegrationTestJobName = "Test-Editor-Integration-Test"
-}
+import static helper.JobHelper.*
 
 String[] fixtures = ["core", "web", "rest", "soap", "swing", "swt"]
 
-def releaseView = createView("Release", "<h3>Release build jobs for the Test-Editor artefacts.</h3>\n" +
+ListView releaseView = createView("Release", "<h3>Release build jobs for the Test-Editor artefacts.</h3>\n" +
         "(see <a href=\"https://github.com/test-editor\">test-editor @ GitHub</a>)")
-def fixtureView = createView("Fixtures", "<h3>Build jobs for the fixtures of the Test-Editor artefacts.</h3>\n" +
+ListView fixtureView = createView("Fixtures", "<h3>Build jobs for the fixtures of the Test-Editor artefacts.</h3>\n" +
         "(see <a href=\"https://github.com/test-editor/fixtures\">fixtures @ GitHub</a>)")
-def testEditorView = createView("Test-Editor", "<h3>Build jobs for the Test-Editor artefacts.</h3>\n" +
+ListView testEditorView = createView("Test-Editor", "<h3>Build jobs for the Test-Editor artefacts.</h3>\n" +
         "(see <a href=\"https://github.com/test-editor/test-editor\">test-editor @ GitHub</a>)")
 //def amlView = createView("AML", "<h3>Build jobs for the Application (Under Test) Mapping Language.</h3>\n" +
 //        "(see <a href=\"https://github.com/test-editor/test-editor-xtext\">AML @ GitHub</a>)")
-
 
 /**
  * Creates all Test-Editor related build jobs
@@ -36,9 +34,9 @@ fixtures.each { fixtureName ->
 /**
  * Creates build job for target plattform
  */
-void createTargetPlattformBuildJob(def view, String repo){
+void createTargetPlattformBuildJob(ListView view, String repo) {
     String jobName = Globals.targetPlattformJobName
-    def buildJob = defaultBuildJob(jobName, repo, 'master', { job ->
+    FreeStyleJob buildJob = defaultBuildJob(jobName, repo, 'master', { FreeStyleJob job ->
         job.steps {
             maven {
                 mavenInstallation(Globals.mavenInstallation)
@@ -53,11 +51,11 @@ void createTargetPlattformBuildJob(def view, String repo){
 /**
  * Creates TE build jobs for develop- and all feature-branches.
  */
-void createTEBuildJobs(def view, String repo) {
+void createTEBuildJobs(ListView view, String repo) {
 
     // Create job for develop branch
     def jobName = createJobName(repo, 'develop')
-    def buildJob = defaultBuildJob(jobName, repo, 'develop', { job ->
+    FreeStyleJob buildJob = defaultBuildJob(jobName, repo, 'develop', { FreeStyleJob job ->
         job.steps {
             copyArtifacts(Globals.targetPlattformJobName) {
                 buildSelector {
@@ -72,6 +70,7 @@ void createTEBuildJobs(def view, String repo) {
             }
         }
     })
+    limitBuildsTo(buildJob, 5)
     addGithubPush(buildJob)
     addXvfbStart(buildJob)
     addPreBuildCleanup(buildJob)
@@ -87,11 +86,11 @@ void createTEBuildJobs(def view, String repo) {
 /**
  * Creates build jobs for develop- and all feature-branches.
  */
-void createBuildJobs(def view, String repo){
+void createBuildJobs(ListView view, String repo) {
 
     // Create job for develop branch
     def jobName = createJobName(repo, 'develop')
-    def buildJob = defaultBuildJob(jobName, repo, 'develop', { job ->
+    FreeStyleJob buildJob = defaultBuildJob(jobName, repo, 'develop', { FreeStyleJob job ->
         job.steps {
             maven {
                 mavenInstallation(Globals.mavenInstallation)
@@ -115,13 +114,13 @@ void createBuildJobs(def view, String repo){
 /**
  * Creates build jobs for feature-branches.
  */
-void createFeatureBranches(def view, String repo) {
+void createFeatureBranches(ListView view, String repo) {
     def branchApi = new URL("https://api.github.com/repos/test-editor/$repo/branches")
     def branches = new JsonSlurper().parse(branchApi.newReader())
 
     branches.findAll { it.name.startsWith('feature/') }.each { branch ->
         def featureJobName = createJobName(repo, branch.name)
-        def buildJob = defaultBuildJob(featureJobName, repo, branch.name, { job ->
+        FreeStyleJob buildJob = defaultBuildJob(featureJobName, repo, branch.name, { FreeStyleJob job ->
             job.steps {
                 if (repo == 'test-editor') { // TODO
                     copyArtifacts('Test-Editor-Target-Platform') {
@@ -148,10 +147,10 @@ void createFeatureBranches(def view, String repo) {
 /**
  * Creates a release job for the given fixture.
  */
-void createReleaseJobs4Fixtures(def view, String fixtureName, String repo){
-        def releaseJobName = "${fixtureName}_fixture_RELEASE"
+void createReleaseJobs4Fixtures(ListView view, String fixtureName, String repo) {
+    def releaseJobName = "${fixtureName}_fixture_RELEASE"
 
-    defaultBuildJob(releaseJobName, repo, 'master', { job ->
+    defaultBuildJob(releaseJobName, repo, 'master', { FreeStyleJob job ->
         if (!fixtureName.equals('core')) {
             job.parameters {
                 stringParam('NEW_FIXTURE_VERSION', '', 'Please enter the fixture version number of the new release.')
@@ -250,174 +249,4 @@ void createReleaseJobs4Fixtures(def view, String fixtureName, String repo){
         }
     })
     addJob2View(view, releaseJobName)
-}
-
-/**
- * Defines how a default build job should look like.
- */
-def defaultBuildJob(String jobName, String repo, String branch, Closure closure) {
-    def buildJob = job(jobName) {
-        description "Performs a build on branch: $branch"
-        scm {
-            git (
-                    "git@github.com:test-editor/${repo}.git",
-                    branch,
-                    gitConfigure(branch, true)
-            )
-        }
-    }
-
-    if(closure){
-        closure(buildJob)
-    }
-    return buildJob
-}
-
-/**
- * Adds github push trigger to given job
- */
-void addGithubPush(def job) {
-    job.with {
-        triggers {
-            githubPush()
-        }
-    }
-}
-
-/**
- * Adds QA publishers to given job
- */
-void addQAPublishers(def job){
-    job.with{
-        publishers {
-            checkstyle('**/target/checkstyle-result.xml')
-            findbugs('**/target/findbugsXml.xml')
-            jacocoCodeCoverage {
-                execPattern '**/**.exec'
-            }
-            archiveJunit '**/target/surefire-reports/*.xml'
-        }
-    }
-}
-
-/**
- * Adds QA publishers to given job
- */
-void addExtendedQAPublishers(def job) {
-    job.with {
-        publishers {
-            checkstyle('**/target/checkstyle-result.xml')
-            findbugs('**/target/findbugsXml.xml')
-            pmd('**/target/pmd.xml')
-            jacocoCodeCoverage {
-                execPattern '**/**.exec'
-            }
-            archiveJunit '**/target/surefire-reports/*.xml'
-        }
-    }
-}
-
-/**
- * Adds artefact archiving
- */
-void addArchiveArtefacts(def job, String artefact) {
-    job.with {
-        publishers {
-            archiveArtifacts(artefact)
-        }
-    }
-}
-
-/**
- * Git configuration section.
- */
-def gitConfigure(branchName, skippingTag) {
-    { node ->
-        // checkout to local branch
-        node / 'extensions' / 'hudson.plugins.git.extensions.impl.LocalBranch' / localBranch(branchName)
-
-        // no default tagging
-        node / 'skipTag'(skippingTag)
-    }
-}
-
-/**
- * FitNesse plugin configuration section.
- */
-def fitNesseConfigure(path) {
-    { project ->
-        project / 'publishers' / 'hudson.plugins.fitnesse.FitnesseResultsRecorder' {
-            'fitnessePathToXmlResultsIn'(path)
-        }
-    }
-}
-
-/**
- * Creates list view with default columns.
- */
-def createView(String viewName, String text){
-    return listView(viewName){
-        description("${text}")
-        columns {
-            status()
-            weather()
-            name()
-            lastSuccess()
-            lastFailure()
-            lastDuration()
-            buildButton()
-        }
-    }
-}
-
-/**
- * Creates job name for build jobs.
- */
-def createJobName(String repo, String branch){
-    return "${repo}_${branch}_CI".replaceAll('/', '_')
-}
-
-/**
- * Adds job to given view.
- */
-void addJob2View(def view, String jobName){
-    view.with {
-        jobs {
-            name(jobName)
-        }
-    }
-}
-
-/**
- * Adds the xvfb start to build job
- */
-void addXvfbStart(def job){
-    job.with{
-        wrappers {
-            xvfb('System') {
-                timeout(0)
-                screen('1024x768x24')
-                displayNameOffset(1)
-            }
-        }
-    }
-}
-
-/**
- * Adds pre build clean-up of workspace
- */
-void addPreBuildCleanup(def job){
-    job.with{
-        wrappers {
-            preBuildCleanup()
-        }
-    }
-}
-
-void addTriggerBuildOnProject(def job, String projectName) {
-    job.with {
-        publishers {
-            downstream(projectName, 'SUCCESS')
-        }
-    }
 }
