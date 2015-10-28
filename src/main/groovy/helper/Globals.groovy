@@ -15,5 +15,4 @@ class Globals {
 
     /** The name of the 1.7.80 jdk */
     static String jdk = "JDK-7u80"
-
 }
