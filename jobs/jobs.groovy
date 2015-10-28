@@ -276,7 +276,5 @@ FreeStyleJob defaultBuildJob(String jobName, String repo, String branch, Closure
     FreeStyleJob buildJob = job(jobName)
     addDefaultConfiguration(buildJob, branch, closure)
     addTEGitRepo(buildJob, repo, branch)
-    addGitConfigureBranch(buildJob, branch)
-    addGitConfigureSkipTag(buildJob, true)
     return buildJob
 }
