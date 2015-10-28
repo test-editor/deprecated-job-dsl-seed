@@ -57,6 +57,21 @@ class JobHelper {
     }
 
     /**
+     * Adds Git submodules configuration section.
+     */
+    static void addGitConfigureSubmodules(FreeStyleJob job, boolean disable, boolean recursive, boolean tracking) {
+        job.with {
+            configure { project ->
+                project / 'scm' / 'extensions' / 'hudson.plugins.git.extensions.impl.SubmoduleOption' {
+                    'disableSubmodules'(disable)
+                    'recursiveSubmodules'(recursive)
+                    'trackingSubmodules'(tracking)
+                }
+            }
+        }
+    }
+
+    /**
      * FitNesse plugin configuration section.
      */
     static void fitNesseConfigure(FreeStyleJob job, path) {
@@ -190,4 +205,31 @@ class JobHelper {
         }
     }
 
+    /**
+     * Vagrant configuration section.
+     */
+    static void addVagrantConfigure(FreeStyleJob job, String vagrantFilePath, String command) {
+        job.with {
+            configure { project ->
+                project / 'builders' {
+                    'org.jenkinsci.plugins.vagrant.VagrantDestroyCommand' / 'wrapper' {
+                        'vagrantFile'(vagrantFilePath)
+                    }
+                    'org.jenkinsci.plugins.vagrant.VagrantUpCommand' / 'wrapper' {
+                        'vagrantFile'(vagrantFilePath)
+                    }
+                    'org.jenkinsci.plugins.vagrant.VagrantSshCommand' {
+                        'command'(command)
+                        'wrapper' {
+                            'vagrantFile'(vagrantFilePath)
+                        }
+                    }
+                    'org.jenkinsci.plugins.vagrant.VagrantDestroyCommand' / 'wrapper' {
+                        'vagrantFile'(vagrantFilePath)
+                    }
+                }
+            }
+        }
+    }
 }
+

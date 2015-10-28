@@ -21,6 +21,7 @@ ListView testEditorView = createView("Test-Editor", "<h3>Build jobs for the Test
  */
 createTargetPlattformBuildJob(testEditorView, 'te.target')
 //createBuildJobs(amlView, 'test-editor-xtext')
+createTEAcceptanceTestJob(testEditorView, 'acceptance-test-infra')
 createTEBuildJobs(testEditorView, 'test-editor')
 createBuildJobs(fixtureView, 'fixtures')
 
@@ -45,6 +46,38 @@ void createTargetPlattformBuildJob(ListView view, String repo) {
         }
     })
     addArchiveArtefacts(buildJob, 'org.testeditor.releng.target/p2-local/**')
+    addJob2View(view, jobName)
+}
+
+/**
+ * Creates TE acceptance test job
+ */
+void createTEAcceptanceTestJob(ListView view, String repo) {
+    String jobName = Globals.teAcceptanceTestLinuxJobName
+    String vagrantFilePath = '/var/lib/jenkins/jobs/' + Globals.teAcceptanceTestLinuxJobName + '/workspace/linux/Vagrantfile'
+    FreeStyleJob buildJob = defaultBuildJob(jobName, repo, 'master', { FreeStyleJob job ->
+        job.steps {
+            copyArtifacts('test-editor_develop_CI') {
+                buildSelector {
+                    latestSuccessful(true)
+                }
+                includePatterns('product/org.testeditor.product/target/products/*.zip')
+                targetDirectory('linux')
+                fingerprintArtifacts(true)
+                flatten(true)
+            }
+
+            maven {
+                mavenInstallation(Globals.mavenInstallation)
+                goals('clean install')
+            }
+        }
+    })
+    limitBuildsTo(buildJob, 5)
+    addPreBuildCleanup(buildJob)
+    addGitConfigureSubmodules(buildJob, false, true, true)
+    addVagrantConfigure(buildJob, vagrantFilePath, '/vagrant/launchTests.sh')
+    fitNesseConfigure(buildJob, '**/.metadata/logs/latestResult.xml')
     addJob2View(view, jobName)
 }
 

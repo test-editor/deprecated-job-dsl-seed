@@ -13,6 +13,9 @@ class Globals {
     /** The name of the te integration test job name. */
     static String teIntegrationTestJobName = "Test-Editor-Integration-Test"
 
+    /** The name of the te acceptance test job name. */
+    static String teAcceptanceTestLinuxJobName = "Test-Editor-Acceptance-Test-Linux"
+
     /** The name of the 1.7.80 jdk */
     static String jdk = "JDK-7u80"
 }
