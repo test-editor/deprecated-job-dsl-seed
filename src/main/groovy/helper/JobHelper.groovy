@@ -218,7 +218,7 @@ class JobHelper {
                     'vagrantFile'(vagrantFilePath)
                 }
                 project / builders / 'org.jenkinsci.plugins.vagrant.VagrantSshCommand' {
-                    'command'(command)
+                    'command'('$command')
                     'wrapper' {
                         'vagrantFile'(vagrantFilePath)
                     }
