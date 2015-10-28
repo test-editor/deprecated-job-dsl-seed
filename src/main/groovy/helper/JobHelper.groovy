@@ -6,31 +6,45 @@ import javaposse.jobdsl.dsl.views.ListView
 class JobHelper {
 
     /**
-     * Defines how a default build job should look like.
+     *  Adds JDK, default discription and optional closure to given job.
      */
-    static FreeStyleJob defaultBuildJob(String jobName, String repo, String branch, Closure closure) {
-        FreeStyleJob buildJob = job(jobName) {
+    static void addDefaultConfiguration(FreeStyleJob job, String branch, Closure closure) {
+        job.with {
             jdk(Globals.jdk)
             description "Performs a build on branch: $branch"
-            scm {
-                git("git@github.com:test-editor/${repo}.git", branch, gitConfigure(branch, true))
-            }
         }
 
         if (closure) {
-            closure(buildJob)
+            closure(job)
         }
-        return buildJob
     }
 
     /**
-     * Git configuration section.
+     *  Adds Git repo to given job.
      */
-    static void gitConfigure(branchName, skippingTag) {
+    static void addTEGitRepo(FreeStyleJob job, String repo, String branch) {
+        job.with {
+            scm {
+                git("git@github.com:test-editor/${repo}.git", branch, null)
+            }
+        }
+    }
+
+    /**
+     * Adds Git branch configuration section.
+     */
+    static void addGitConfigureBranch(branchName) {
         { node ->
             // checkout to local branch
             node / 'extensions' / 'hudson.plugins.git.extensions.impl.LocalBranch' / localBranch(branchName)
+        }
+    }
 
+    /**
+     * Adds Git skipping tag creation configuration section.
+     */
+    static void addGitConfigureSkipTag(skippingTag) {
+        { node ->
             // no default tagging
             node / 'skipTag'(skippingTag)
         }
@@ -98,24 +112,6 @@ class JobHelper {
         job.with {
             publishers {
                 archiveArtifacts(artefact)
-            }
-        }
-    }
-
-    /**
-     * Creates list view with default columns.
-     */
-    static ListView createView(String viewName, String text) {
-        return listView(viewName) {
-            description("${text}")
-            columns {
-                status()
-                weather()
-                name()
-                lastSuccess()
-                lastFailure()
-                lastDuration()
-                buildButton()
             }
         }
     }
