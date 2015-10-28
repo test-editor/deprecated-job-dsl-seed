@@ -211,20 +211,20 @@ class JobHelper {
     static void addVagrantConfigure(FreeStyleJob job, String vagrantFilePath, String command) {
         job.with {
             configure { project ->
-                project / 'builders' {
-                    'org.jenkinsci.plugins.vagrant.VagrantDestroyCommand' / 'wrapper' {
+                project / builders / 'org.jenkinsci.plugins.vagrant.VagrantDestroyCommand' / 'wrapper' {
+                    'vagrantFile'(vagrantFilePath)
+                }
+                project / builders / 'org.jenkinsci.plugins.vagrant.VagrantUpCommand' / 'wrapper' {
+                    'vagrantFile'(vagrantFilePath)
+                }
+                project / builders / 'org.jenkinsci.plugins.vagrant.VagrantSshCommand' {
+                    'command'(command)
+                    'wrapper' {
                         'vagrantFile'(vagrantFilePath)
                     }
-                    'org.jenkinsci.plugins.vagrant.VagrantUpCommand' / 'wrapper' {
-                        'vagrantFile'(vagrantFilePath)
-                    }
-                    'org.jenkinsci.plugins.vagrant.VagrantSshCommand' {
-                        'command'(command)
-                        'wrapper' {
-                            'vagrantFile'(vagrantFilePath)
-                        }
-                    }
-                    'org.jenkinsci.plugins.vagrant.VagrantDestroyCommand' / 'wrapper' {
+                }
+                project / builders << 'org.jenkinsci.plugins.vagrant.VagrantDestroyCommand' {
+                    'wrapper' {
                         'vagrantFile'(vagrantFilePath)
                     }
                 }
