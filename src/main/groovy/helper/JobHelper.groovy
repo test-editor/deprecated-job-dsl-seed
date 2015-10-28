@@ -25,10 +25,33 @@ class JobHelper {
     static void addTEGitRepo(FreeStyleJob job, String repo, String branch) {
         job.with {
             scm {
-                git("git@github.com:test-editor/${repo}.git", branch, {
-                    localBranch(branch)
-                    createTag(false)
-                })
+                git("git@github.com:test-editor/${repo}.git", branch, null)
+            }
+        }
+        addGitConfigureSkipTag(job, true)
+        addGitConfigureBranch(job, branch)
+    }
+
+    /**
+     * Adds Git branch configuration section.
+     */
+    static void addGitConfigureBranch(FreeStyleJob job, branchName) {
+        job.with {
+            configure { project ->
+                // checkout to local branch
+                project / 'scm' / 'extensions' / 'hudson.plugins.git.extensions.impl.LocalBranch' / localBranch(branchName)
+            }
+        }
+    }
+
+    /**
+     * Adds Git skipping tag creation configuration section.
+     */
+    static void addGitConfigureSkipTag(FreeStyleJob job, skippingTag) {
+        job.with {
+            configure { project ->
+                // no default tagging
+                project / 'scm' / 'skipTag'(skippingTag)
             }
         }
     }
