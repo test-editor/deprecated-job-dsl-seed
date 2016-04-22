@@ -14,7 +14,7 @@ ListView testEditorXtextView = createView('Test-Editor 2', """
 // Job for each branch except for master
 def branches = getBranches(repo)
 branches.findAll { it.name != 'master' }.each { branch ->
-    
+
     String branchName = branch.name
     def jobName = "${repo}_${branchName}".replaceAll('/', '_')
 

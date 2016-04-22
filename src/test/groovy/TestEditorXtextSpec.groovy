@@ -6,7 +6,7 @@ class TestEditorXtextSpec extends Specification {
     def 'jobExecutionWorks'() {
         given:
         JobManagement jm = new MemoryJobManagement()
-        String script = new File('jobs/test-editor-xtext.groovy').text
+        String script = new File('jobs/test_editor_xtext.groovy').text
 
         when:
         GeneratedItems generatedItems = DslScriptLoader.runDslEngine(script, jm)
