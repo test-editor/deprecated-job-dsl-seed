@@ -42,8 +42,15 @@ branches.findAll { it.name != 'master' }.each { branch ->
     limitBuildsTo(buildJob, 10)
     addGithubPush(buildJob)
     addXvfbStart(buildJob)
-    addPreBuildCleanup(buildJob)
-    addExtendedQAPublishers(buildJob)
+    buildJob.with {
+        publishers {
+            jacocoCodeCoverage {
+                execPattern '**/target/**.exec'
+                exclusionPattern '**/*Test.class, **/*IT.class, **/antlr/**'
+            }
+            archiveJunit '**/target/surefire-reports/*.xml'
+        }
+    }
     if (branchName == 'develop') {
         addArchiveArtefacts(buildJob, 'product/org.testeditor.product/target/products/TestEditor*.zip')
     }
