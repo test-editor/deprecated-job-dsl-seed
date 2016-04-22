@@ -12,8 +12,6 @@ ListView fixtureView = createView("Fixtures", "<h3>Build jobs for the fixtures o
         "(see <a href=\"https://github.com/test-editor/fixtures\">fixtures @ GitHub</a>)")
 ListView testEditorView = createView("Test-Editor", "<h3>Build jobs for the Test-Editor artifacts.</h3>\n" +
         "(see <a href=\"https://github.com/test-editor/test-editor\">test-editor @ GitHub</a>)")
-//def amlView = createView("AML", "<h3>Build jobs for the Application (Under Test) Mapping Language.</h3>\n" +
-//        "(see <a href=\"https://github.com/test-editor/test-editor-xtext\">AML @ GitHub</a>)")
 
 /**
  * Creates all Test-Editor related build jobs
