@@ -14,8 +14,9 @@ ListView testEditorXtextView = createView('Test-Editor 2', """
 // Job for each branch except for master
 def branches = getBranches(repo)
 branches.findAll { it.name != 'master' }.each { branch ->
+    
     String branchName = branch.name
-    def jobName = createJobName(repo, branchName)
+    def jobName = "${repo}_${branchName}".replaceAll('/', '_')
 
     FreeStyleJob buildJob = defaultBuildJob(jobName, repo, branchName, { FreeStyleJob job ->
         job.steps {
@@ -47,4 +48,32 @@ branches.findAll { it.name != 'master' }.each { branch ->
         addArchiveArtefacts(buildJob, 'product/org.testeditor.product/target/products/TestEditor*.zip')
     }
     addJob2View(testEditorXtextView, jobName)
+}
+
+/**
+ * Creates list view with default columns.
+ */
+ListView createView(String viewName, String text) {
+    return listView(viewName) {
+        description("${text}")
+        columns {
+            status()
+            weather()
+            name()
+            lastSuccess()
+            lastFailure()
+            lastDuration()
+            buildButton()
+        }
+    }
+}
+
+/**
+ * Defines how a default build job should look like.
+ */
+FreeStyleJob defaultBuildJob(String jobName, String repo, String branch, Closure closure) {
+    FreeStyleJob buildJob = job(jobName)
+    addDefaultConfiguration(buildJob, branch, closure)
+    addTEGitRepo(buildJob, repo, branch)
+    return buildJob
 }

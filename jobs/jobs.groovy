@@ -315,4 +315,30 @@ void createReleaseJobs4Fixtures(ListView view, String fixtureName, String repo) 
     addJob2View(view, releaseJobName)
 }
 
+/**
+ * Creates list view with default columns.
+ */
+ListView createView(String viewName, String text) {
+    return listView(viewName) {
+        description("${text}")
+        columns {
+            status()
+            weather()
+            name()
+            lastSuccess()
+            lastFailure()
+            lastDuration()
+            buildButton()
+        }
+    }
+}
 
+/**
+ * Defines how a default build job should look like.
+ */
+FreeStyleJob defaultBuildJob(String jobName, String repo, String branch, Closure closure) {
+    FreeStyleJob buildJob = job(jobName)
+    addDefaultConfiguration(buildJob, branch, closure)
+    addTEGitRepo(buildJob, repo, branch)
+    return buildJob
+}

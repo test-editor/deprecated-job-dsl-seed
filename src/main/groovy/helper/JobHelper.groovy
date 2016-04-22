@@ -11,33 +11,7 @@ class JobHelper {
         return new JsonSlurper().parse(branchApi.newReader())
     }
 
-    /**
-     * Creates list view with default columns.
-     */
-    static ListView createView(String viewName, String text) {
-        return listView(viewName) {
-            description("${text}")
-            columns {
-                status()
-                weather()
-                name()
-                lastSuccess()
-                lastFailure()
-                lastDuration()
-                buildButton()
-            }
-        }
-    }
 
-    /**
-     * Defines how a default build job should look like.
-     */
-    static FreeStyleJob defaultBuildJob(String jobName, String repo, String branch, Closure closure) {
-        FreeStyleJob buildJob = job(jobName)
-        addDefaultConfiguration(buildJob, branch, closure)
-        addTEGitRepo(buildJob, repo, branch)
-        return buildJob
-    }
 
     /**
      *  Adds JDK, default discription and optional closure to given job.
