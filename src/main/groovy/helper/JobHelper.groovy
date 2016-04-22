@@ -1,9 +1,15 @@
 package helper
 
+import groovy.json.JsonSlurper
 import javaposse.jobdsl.dsl.jobs.FreeStyleJob
 import javaposse.jobdsl.dsl.views.ListView
 
 class JobHelper {
+
+    static Object getBranches(String repo) {
+        def branchApi = new URL("https://api.github.com/repos/test-editor/$repo/branches")
+        return new JsonSlurper().parse(branchApi.newReader())
+    }
 
     /**
      *  Adds JDK, default discription and optional closure to given job.
