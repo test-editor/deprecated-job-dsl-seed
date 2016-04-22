@@ -11,8 +11,6 @@ class JobHelper {
         return new JsonSlurper().parse(branchApi.newReader())
     }
 
-
-
     /**
      *  Adds JDK, default discription and optional closure to given job.
      */
