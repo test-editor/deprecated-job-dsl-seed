@@ -7,11 +7,11 @@ import static helper.JobHelper.*
 
 String[] fixtures = ["core", "web", "rest", "soap", "swing", "swt"]
 
-ListView releaseView = createView("Release", "<h3>Release build jobs for the Test-Editor artefacts.</h3>\n" +
+ListView releaseView = createView("Release", "<h3>Release build jobs for the Test-Editor artifacts.</h3>\n" +
         "(see <a href=\"https://github.com/test-editor\">test-editor @ GitHub</a>)")
-ListView fixtureView = createView("Fixtures", "<h3>Build jobs for the fixtures of the Test-Editor artefacts.</h3>\n" +
+ListView fixtureView = createView("Fixtures", "<h3>Build jobs for the fixtures of the Test-Editor artifacts.</h3>\n" +
         "(see <a href=\"https://github.com/test-editor/fixtures\">fixtures @ GitHub</a>)")
-ListView testEditorView = createView("Test-Editor", "<h3>Build jobs for the Test-Editor artefacts.</h3>\n" +
+ListView testEditorView = createView("Test-Editor", "<h3>Build jobs for the Test-Editor artifacts.</h3>\n" +
         "(see <a href=\"https://github.com/test-editor/test-editor\">test-editor @ GitHub</a>)")
 //def amlView = createView("AML", "<h3>Build jobs for the Application (Under Test) Mapping Language.</h3>\n" +
 //        "(see <a href=\"https://github.com/test-editor/test-editor-xtext\">AML @ GitHub</a>)")
