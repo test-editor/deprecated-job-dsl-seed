@@ -1,9 +1,43 @@
 package helper
 
+import groovy.json.JsonSlurper
 import javaposse.jobdsl.dsl.jobs.FreeStyleJob
 import javaposse.jobdsl.dsl.views.ListView
 
 class JobHelper {
+
+    static Object getBranches(String repo) {
+        def branchApi = new URL("https://api.github.com/repos/test-editor/$repo/branches")
+        return new JsonSlurper().parse(branchApi.newReader())
+    }
+
+    /**
+     * Creates list view with default columns.
+     */
+    static ListView createView(String viewName, String text) {
+        return listView(viewName) {
+            description("${text}")
+            columns {
+                status()
+                weather()
+                name()
+                lastSuccess()
+                lastFailure()
+                lastDuration()
+                buildButton()
+            }
+        }
+    }
+
+    /**
+     * Defines how a default build job should look like.
+     */
+    static FreeStyleJob defaultBuildJob(String jobName, String repo, String branch, Closure closure) {
+        FreeStyleJob buildJob = job(jobName)
+        addDefaultConfiguration(buildJob, branch, closure)
+        addTEGitRepo(buildJob, repo, branch)
+        return buildJob
+    }
 
     /**
      *  Adds JDK, default discription and optional closure to given job.
