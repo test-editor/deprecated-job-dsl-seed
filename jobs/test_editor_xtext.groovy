@@ -49,6 +49,7 @@ branches.findAll { it.name != 'master' }.each { branch ->
                 exclusionPattern '**/*Test.class, **/*IT.class, **/antlr/**'
             }
             archiveJunit '**/target/surefire-reports/*.xml'
+            githubCommitNotifier()
         }
     }
     if (branchName == 'develop') {
