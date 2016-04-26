@@ -18,4 +18,8 @@ class Globals {
 
     /** The name of the 1.7.80 jdk */
     static String jdk = "JDK-7u80"
+
+    /** The name of the jdk 8. */
+    static String jdk8 = "JDK-8u66"
+
 }
