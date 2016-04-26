@@ -1,5 +1,4 @@
 import helper.Globals
-import javaposse.jobdsl.dsl.Job
 import javaposse.jobdsl.dsl.jobs.FreeStyleJob
 import javaposse.jobdsl.dsl.views.ListView
 
@@ -79,11 +78,11 @@ ListView createView(String viewName, String text) {
 /**
  * Defines how a default build job should look like.
  */
-FreeStyleJob defaultBuildJob(String jobName, String repo, String branch) {
+FreeStyleJob defaultBuildJob(String jobName, String repo, String branchName, Closure closure) {
     FreeStyleJob buildJob = job(jobName)
     buildJob.with {
         jdk(Globals.jdk8)
-        description """Performs a build on branch: <a href="https://github.com/test-editor/$repo/tree/$branch">$branch</a>."""
+        description """Performs a build on branch: <a href="https://github.com/test-editor/$repo/tree/$branchName">$branchName</a>."""
         scm {
             git {
                 remote {
@@ -94,6 +93,9 @@ FreeStyleJob defaultBuildJob(String jobName, String repo, String branch) {
                 localBranch(branchName)
             }
         }
+    }
+    if (closure) {
+        closure(buildJob)
     }
     return buildJob
 }
