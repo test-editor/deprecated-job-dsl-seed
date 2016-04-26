@@ -81,7 +81,7 @@ ListView createView(String viewName, String text) {
  */
 FreeStyleJob defaultBuildJob(String jobName, String repo, String branch) {
     FreeStyleJob buildJob = job(jobName)
-    job.with {
+    buildJob.with {
         jdk(Globals.jdk8)
         description """Performs a build on branch: <a href="https://github.com/test-editor/$repo/tree/$branch">$branch</a>."""
         scm {
