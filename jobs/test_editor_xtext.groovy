@@ -103,6 +103,7 @@ FreeStyleJob defaultBuildJob(String jobName, String repo, String branchName, Clo
                 }
                 createTag(false)
                 localBranch(branchName)
+                shallowClone(true)
             }
         }
     }
