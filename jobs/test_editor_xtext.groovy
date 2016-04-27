@@ -72,6 +72,7 @@ ListView createView(String viewName, String text) {
             lastFailure()
             lastDuration()
             buildButton()
+            jacoco()
         }
     }
 }
