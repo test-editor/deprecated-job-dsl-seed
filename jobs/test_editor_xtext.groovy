@@ -53,7 +53,7 @@ branches.findAll { it.name != 'master' }.each { branch ->
         }
     }
     if (branchName == 'develop') {
-        addArchiveArtefacts(buildJob, 'product/org.testeditor.product/target/products/TestEditor*.zip')
+        addArchiveArtefacts(buildJob, 'rcp/org.testeditor.rcp4.product/target/products/*.zip')
     }
     addJob2View(testEditorXtextView, jobName)
 }
