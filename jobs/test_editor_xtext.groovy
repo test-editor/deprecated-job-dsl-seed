@@ -43,7 +43,7 @@ branches.findAll { it.name != 'master' }.each { branch ->
                 property('tycho.localArtifacts', 'ignore')
             }
             // Upload code coverage to codecov.io
-            shell("""
+            shell("""\
                 #!/bin/bash
                 bash <(curl -s https://codecov.io/bash) || echo "Codecov did not collect coverage reports"
             """.stripIndent())
