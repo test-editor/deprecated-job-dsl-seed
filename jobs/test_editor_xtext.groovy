@@ -19,6 +19,11 @@ branches.findAll { it.name != 'master' }.each { branch ->
     def jobName = "${repo}_${branchName}".replaceAll('/', '_')
 
     FreeStyleJob buildJob = defaultBuildJob(jobName, repo, branchName, { FreeStyleJob job ->
+        job.wrappers {
+            credentialsBinding {
+                string('CODECOV_TOKEN', "codecov_$repo")
+            }
+        }
         job.steps {
             // Build the target platform
             maven {
@@ -37,6 +42,11 @@ branches.findAll { it.name != 'master' }.each { branch ->
                 mavenOpts('-Xms512m -Xmx2g')
                 property('tycho.localArtifacts', 'ignore')
             }
+            // Upload code coverage to codecov.io
+            shell("""
+                #!/bin/bash
+                bash <(curl -s https://codecov.io/bash) || echo "Codecov did not collect coverage reports"
+            """.stripIndent())
         }
     })
     limitBuildsTo(buildJob, 10)
