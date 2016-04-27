@@ -2,9 +2,9 @@ package helper
 
 import groovy.json.JsonSlurper
 
-class JobHelperMock {
+class JobHelperMock extends JobHelper {
 
-    static Object getMockedBranches(String repo) {
+    static Object getBranches(String repo) {
         def result = """
             [
               {
@@ -31,6 +31,12 @@ class JobHelperMock {
             ]
         """
         return new JsonSlurper().parseText(result)
+    }
+
+    /**
+     * Mocks the jacoco() call on a list view.
+     */
+    static void jacoco() {
     }
 
 }

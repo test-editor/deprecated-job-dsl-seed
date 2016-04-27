@@ -1,11 +1,7 @@
 apply plugin: 'groovy'
 
 sourceSets {
-    jobs {
-        groovy {
-            srcDirs 'jobs'
-        }
-    }
+    main.groovy.srcDirs 'jobs'
 }
 
 repositories {

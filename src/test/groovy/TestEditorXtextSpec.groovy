@@ -8,7 +8,7 @@ class TestEditorXtextSpec extends Specification {
         given:
         JobManagement jm = new MemoryJobManagement()
         String script = new File('jobs/test_editor_xtext.groovy').text.with {
-            return replaceFirst('getBranches', "${JobHelperMock.name}.getMockedBranches")
+            return replaceFirst('import static helper\\.JobHelper', "import static ${JobHelperMock.name}")
         }
 
         when:
